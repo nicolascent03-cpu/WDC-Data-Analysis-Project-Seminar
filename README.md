@@ -1,6 +1,6 @@
 # Conflict, Democracy and Arms
 
-Data Analysis with Python, University of Zurich, HS26. Nicolas Centorame and Yair.
+Data Analysis with Python, University of Zurich, HS26. Nicolas Centorame and Yair Segal.
 
 ## Research question
 

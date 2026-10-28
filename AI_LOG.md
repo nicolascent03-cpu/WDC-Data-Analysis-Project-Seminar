@@ -19,7 +19,7 @@ Add a line every time you use AI for the project, in your own words, on the same
 - All decisions in the decisions log (`CONVENTIONS.md`)
 - The analysis, the findings and their interpretation
 - Slides and presentation
-- The final report (written without AI, as the course requires)
+- The final report (written without AI)
 
 ## Log
 

@@ -1,2 +1,16 @@
+# environment
+.venv/
+__pycache__/
+.ipynb_checkpoints/
+
+# large raw file (each person keeps a local copy)
+data/raw/vdem/
+
+# system files
 .DS_Store
-**/.DS_Store
+
+# streamlit secrets (never commit)
+.streamlit/secrets.toml
+
+# files made by the example cells in the sandboxes
+notebooks/example_*.csv

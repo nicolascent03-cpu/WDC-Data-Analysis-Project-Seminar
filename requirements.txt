@@ -1,6 +1,6 @@
-pandas>=2.2
+pandas>=3.0
 openpyxl
-plotly>=5.20
+matplotlib>=3.8
 streamlit>=1.50
 jupyter
 nbstripout

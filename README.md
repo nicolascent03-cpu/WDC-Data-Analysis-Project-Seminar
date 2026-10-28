@@ -1,6 +1,6 @@
 # Conflict, Democracy and Arms
 
-Data Analysis with Python, University of Zurich, HS26. Nicolas Centorame and Yair Segal.
+Data Analysis with Python, University of Zurich, HS26. Nicolas Centorame and Yair.
 
 ## Research question
 
@@ -22,6 +22,7 @@ The V-Dem file is too large for GitHub. Download it and put it in `data/raw/vdem
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
+nbstripout --install
 ```
 
 1. Run the notebooks in this order with Restart and Run All: 00, 03, 01, 02, 04, 05, 06, 07. Notebooks 01 to 06 write their results to `data/clean/`.
@@ -34,7 +35,7 @@ pip install -r requirements.txt
 | --- | --- |
 | 01 Crosswalk, 05 Merge, 06 Part B and C, app | Together |
 | 02 UCDP, 03 V-Dem, conflict-by-regime descriptives, `app/panels_conflict.py` (regime bands, conflict bars) | Nicolas |
-| 04 SIPRI, arms and war/peace descriptives, `app/panels_arms.py` (arms line, suppliers, world map), `app/panels_analysis.py` (democracy line, main chart) | Yair |
+| 04 SIPRI, arms and war/peace descriptives, `app/panels_arms.py` (arms imports, suppliers, global trends), `app/panels_analysis.py` (democracy line, main chart) | Yair |
 
 ## Findings
 

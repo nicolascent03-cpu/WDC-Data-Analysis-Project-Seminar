@@ -11,10 +11,12 @@ so you know how it should look and feel before you write streamlit_app.py.
 Exercises 1 to 4 need no data: do them now (week 1). You need data/clean/panel.csv for
 exercise 5 onwards (from notebook 05).
 
-Two warnings for everything you find online (older tutorials and AI answers often get these wrong):
-- Do not use use_container_width=True. It is deprecated. st.plotly_chart fills the width by default.
-- If two identical charts are on one page, Streamlit stops with a "duplicate element" error.
-  Give every st.plotly_chart its own key, for example st.plotly_chart(fig, key="democracy").
+Charts: we use matplotlib, as in the week 5 data viz lecture. Make the chart with
+fig, ax = plt.subplots(), draw on ax, then show it in the app with st.pyplot(fig).
+
+One warning: if two identical widgets (for example two dropdowns with the same label) are on
+one page, Streamlit stops with a "duplicate element" error. Give each its own key, for example
+st.selectbox("Country", names, key="country_left").
 
 ------------------------------------------------------------------------------------
 HOW THE FINISHED APP SHOULD LOOK AND FEEL
@@ -58,8 +60,12 @@ HOW THE FINISHED APP SHOULD LOOK AND FEEL
 # terminal: how often does it print when you move the slider, with and without the decorator?
 
 
-# Exercise 6: filter panel to one country (for example "UKR") and draw democracy_index over time
-# with plotly express. Show it with st.plotly_chart.
+# Exercise 6: filter panel to one country (for example "UKR") and draw democracy_index over time:
+#   import matplotlib.pyplot as plt
+#   fig, ax = plt.subplots(figsize=(8, 2))
+#   ax.plot(rows["year"], rows["democracy_index"])
+#   st.pyplot(fig)
+# (the same as in the notebooks, only plt.show() becomes st.pyplot(fig))
 
 
 # Exercise 7: write in a comment, in your own words: why does Streamlit run the whole file again
@@ -104,26 +110,24 @@ HOW THE FINISHED APP SHOULD LOOK AND FEEL
 
 
 # Exercise 11: STACKED TIMELINES THAT LOOK LIKE ONE PICTURE.
-# Draw three charts under each other for the chosen country: democracy_index, arms_imports_tiv,
-# and conflict_active (as bars). For each chart:
-# 1. same x-axis range:              fig.update_xaxes(range=[1950, 2025])
-# 2. same small height:              fig.update_layout(height=180)
-# 3. small margins:                  fig.update_layout(margin=dict(l=10, r=10, t=30, b=10))
-# 4. a short chart title, a y-axis title with the unit, no x-axis title, no legend if there is only one line
-# 5. a dashed line at the slider year: fig.add_vline(x=year, line_dash="dash")
-# 6. legend above the chart:          fig.update_layout(legend=dict(orientation="h", y=1.3))
-# 7. same left margin everywhere:     margin=dict(l=60, ...) and fig.update_yaxes(automargin=False)
-#    (otherwise y labels of different widths push the plot areas apart)
-# 8. a key for each chart:            st.plotly_chart(fig, key="dem_line") and so on
-# Move the slider and watch the line move in all three. This replaces the linked hover from the demo.
-# Check: hold a ruler to the screen. Do 1950 and 2025 sit at the same place in all three charts?
+# 1. One figure with three drawing areas under each other that share the year axis:
+#      fig, axes = plt.subplots(3, 1, sharex=True, figsize=(10, 5))
+# 2. Draw democracy_index on axes[0] (ax.plot), arms_imports_tiv on axes[1] (ax.bar) and
+#    conflict_active on axes[2] (ax.bar) for the chosen country.
+# 3. On each ax: a short title (ax.set_title) and a y-label with the unit. Set the year range once:
+#    axes[0].set_xlim(1950, 2025). Because of sharex=True, all three follow.
+# 4. A dashed line at the slider year on every ax: ax.axvline(year, linestyle="--", color="grey").
+#    A loop does it in two lines: for ax in axes: ax.axvline(...)
+# 5. plt.tight_layout(), then st.pyplot(fig).
+# Move the slider and watch the line move in all three.
+# Later in the app, the same five charts come from your functions in the panels files.
 
 
 # Exercise 12: ONE COLOUR SYSTEM.
 # 1. Write a dictionary regime_colours with one colour (hex code, for example "#1D4E89") for each
 #    of the four regime labels.
-# 2. Draw a bar chart of how many years the country spent in each regime type and use
-#    color_discrete_map=regime_colours.
+# 2. Count how many years the country spent in each regime type (value_counts) and draw a bar
+#    chart: ax.bar(labels, counts, color=[regime_colours[l] for l in labels]).
 # 3. Agree with Yair on the final colours and write them into 07_charts.ipynb.
 
 

@@ -4,7 +4,7 @@ Nicolas Centorame and Yair. As of 27 October 2026.
 
 ## Overview
 
-You build one merged country-year dataset from three sources and show it in a three-page Streamlit app, finished and presented on Thu 12 Nov 2026. This guide walks through every step in order. You write the analysis code yourselves; the guide gives tasks, hints and checks.
+You build one merged country-year dataset from three sources and show it in a three-page Streamlit app, presented on Fri 4 Dec 2026 (12:00 to 16:00, KOL-H-309). This guide walks through every step in order. You write the analysis code yourselves; the guide gives tasks, hints and checks.
 
 **Research question:** What happens to democracy during and after armed conflict, and does it look different in countries that import many weapons?
 
@@ -16,11 +16,13 @@ You build one merged country-year dataset from three sources and show it in a th
 
 **The finished app has three pages:**
 
-1. **Overview:** world map and global trends, a year slider.
+1. **Overview:** the share of countries in conflict over time, the top importers of a chosen year, a year slider.
 2. **Country page:** stacked timelines for one country: regime bands, conflict bars, democracy line, arms imports, top suppliers.
 3. **Analysis page:** the main chart: average democracy in the years before, during and after a conflict starts, split into high and low arms importers.
 
-**Deliverables:** GitHub repo with notebooks 00 to 07 and the app, `panel.csv`, a short report, slides and a 2-minute pitch plus demo.
+**Deliverables:** GitHub repo with regular commits (graded), notebooks 00 to 07 and the app (deployed on Streamlit Cloud), an 8-minute presentation plus 5 minutes Q&A on Dec 4, and a 2 to 3 page report on OLAT by Thu 10 Dec, 23:59. The course asks for the report to be written without AI.
+
+**Grading (from the week 6 slides):** baseline about 4.5; +0.25 project submitted, presented and runs without errors; +0.25 main steps (wrangling, analysis, visualisation); +0.25 Git history with regular commits; +0.25 to 0.75 bonus for deep thinking and technical complexity.
 
 ## Ground rules
 
@@ -35,7 +37,7 @@ Nicolas owns conflict and regime data (14 sandbox tasks), Yair owns arms data pl
 | 06 Part A, 07 charts | Each person for their own theme |
 | Bonus feature | Together, split once you pick it |
 
-**Sandbox, then main.** Each person experiments in their own sandbox notebook (`sandbox_nicolas.ipynb`, `sandbox_yair.ipynb`). Only code that works and that you understand moves into the numbered main notebook. Before moving it, check:
+**Sandbox, then main.** Each person works in their own sandbox notebook (`sandbox_nicolas.ipynb`, `sandbox_yair.ipynb`). Every task there starts with an explanation and a worked example on small made-up data, using only tools from the lectures (weeks 2 to 5), then you write the project code yourself. Only code that works and that you understand moves into the numbered main notebook. Before moving it, check:
 
 - [ ] It runs with Restart and Run All
 - [ ] Names follow `CONVENTIONS.md`
@@ -108,7 +110,7 @@ Goal: `sipri_cy.csv` and `sipri_suppliers.csv`.
 5. Add `iso3` from `crosswalk_sipri`. Sum `tiv` per `iso3` and `year` into `arms_imports_tiv`. Check India 2000 by hand.
 6. Suppliers: a dictionary with each country's top 3 suppliers, then a loop that renames all others to "Other".
 
-Zero is a real value here. A country with no deliveries in a year imported nothing, so it gets 0 in the merge, never a missing value.
+Zero is a real value here. A country with no deliveries in a year imported nothing, so it gets 0 in the merge.
 
 ## Step 5: Merge into panel.csv (together)
 
@@ -146,23 +148,23 @@ Notebook 06 answers the research question with one main result: how average demo
 - Does the result hold for wars only (`max_intensity == 2`)?
 - How many onsets are in each group? Fewer than about 20 makes the lines unreliable; say so.
 - Write 3 findings, one sentence each, with a number.
-- Write one sentence on what the chart cannot show (it shows a pattern; it does not show a cause).
+- Write one sentence on what the chart cannot show (it shows a pattern over time; a cause needs more evidence).
 
 ## Step 7: Chart functions (07_charts)
 
-Every chart is a function that takes a dataframe (and a country code where needed) and returns a plotly figure. Build it in your sandbox, test it in 07, then copy it unchanged into the app.
+Every chart is a matplotlib function that draws on an `ax` it receives, as in the week 5 data viz lecture. Build it in your sandbox, test it in 07, then copy it unchanged into the app.
 
 | Function | Chart | Owner | Goes into |
 | --- | --- | --- | --- |
-| `regime_bands(spans, iso3, year=None)` | Coloured bands per regime period | Nicolas | `panels_conflict.py` |
-| `conflict_bars(spans, iso3, year=None)` | Bars for each conflict period, colour by intensity | Nicolas | `panels_conflict.py` |
-| `democracy_line(panel, iso3, year=None)` | Democracy index over time | Yair | `panels_analysis.py` |
-| `main_chart(event_time)` | `dem_change` by `t`, one line per importer group | Yair | `panels_analysis.py` |
-| `arms_line(panel, iso3, year=None)` | Arms imports (TIV) over time | Yair | `panels_arms.py` |
-| `supplier_area(suppliers, iso3, year=None)` | Top 3 suppliers + Other, stacked by year | Yair | `panels_arms.py` |
-| `world_map(panel, year, column)` | Choropleth for one year | Yair | `panels_arms.py` |
+| `regime_bands(ax, spans, iso3, year=None)` | Coloured horizontal bands per regime period | Nicolas | `panels_conflict.py` |
+| `conflict_bars(ax, spans, iso3, year=None)` | Bars for each conflict period, colour by intensity | Nicolas | `panels_conflict.py` |
+| `arms_line(ax, panel, iso3, year=None)` | Arms imports (TIV) per year | Yair | `panels_arms.py` |
+| `supplier_bars(ax, suppliers, iso3, year=None)` | Top 3 suppliers + Other, stacked bars by year | Yair | `panels_arms.py` |
+| `global_trends(ax, panel, year=None)` | Share of countries in conflict per year | Yair | `panels_arms.py` |
+| `democracy_line(ax, panel, iso3, year=None)` | Democracy index over time | Yair | `panels_analysis.py` |
+| `main_chart(ax, event_time)` | `dem_change` by `t`, one line per importer group | Yair | `panels_analysis.py` |
 
-Rules: same x-axis 1950 to 2025 on all timelines, height 180, the same margins with `fig.update_yaxes(automargin=False)`, a short chart title, a y-axis title with unit and no x-axis title, a dashed line at the selected year, one shared colour system (see `CONVENTIONS.md`).
+Rules: `ax.set_xlim(1950, 2025)` on every timeline, a short title, a y-label with the unit where there are numbers, `ax.set_yticks([])` for the band charts, a dashed line at the selected year, a short message when there is no data, one shared colour system (see `CONVENTIONS.md`). On the country page the five timelines come from `plt.subplots(5, 1, sharex=True)`, so they share one year axis.
 
 ## Step 8: Streamlit app
 
@@ -172,35 +174,48 @@ Checkpoint: all three pages load for any country without an error, including cou
 
 ## Step 9: Bonus feature
 
-Pick one and build it well. Confirm the choice with Justinas.
+Pick one and build it well. The rubric gives up to +0.75 for deep thinking and technical complexity. Confirm your choice with Justinas.
 
 | Option | What it does | Effort |
 | --- | --- | --- |
-| Country comparison (recommended) | Two countries side by side on the same stacked timelines | Medium |
-| Play button | The world map animates through the years | Low to medium |
-| Map click to country | Clicking a country on the map opens its country page | Medium to high |
+| Country comparison (recommended) | Two countries side by side, each with the stacked timelines | Medium |
+| Simple regression | Does pre-onset arms imports predict the change in democracy after onset? One regression with `statsmodels`, as in the week 5 econometrics lecture (add `statsmodels` to `requirements.txt` if you choose this) | Medium |
+| Robustness page | The main chart for wars only, for onsets with a full window, and for first onsets only (from 06 Part C), with a short explanation | Low to medium |
 
 Build it in a try_streamlit file first, add it to the app only after both of you reviewed it, and describe it in the README in two sentences.
 
 ## Step 10: Finish and deliver
 
-Feature freeze is Mon 9 Nov; after that you only fix bugs, write and rehearse.
+Feature freeze is Mon 30 Nov; after that you only fix bugs and rehearse.
 
 **Clean-clone test.** Clone the repo into a new folder, create a fresh environment, put the V-Dem file in place, run notebooks 00, 03, 01, 02, 04, 05, 06, 07, then start the app.
 
-**Presentation (2 minutes plus demo):** question (15 s), data and merge (20 s), live demo (60 s), main finding and caveat (15 s), bonus (10 s). Each of you presents your own theme. Rehearse twice with a timer.
+**Presentation (8 minutes plus 5 minutes Q&A, Fri 4 Dec):** question and why it matters (1 min), data and how you merged it (1.5 min), live demo of the country page (2 min), main finding with the analysis page and its caveat (2 min), bonus feature (1 min), what you would do next (0.5 min). Each of you presents your own theme. Rehearse twice with a timer.
 
-**Report outline:** question; data and cleaning decisions; method; findings with the main chart; limitations; next steps.
+**Report (2 to 3 pages, OLAT, Thu 10 Dec 23:59, written without AI):** names and GitHub link, presentation attached; topic and main questions; one or two takeaways per question; data used (raw data links) and cleaning steps; analysis steps and bonus features; personal contribution split; a human and AI effort disclaimer (your `AI_LOG.md` helps here).
 
 ## Timeline and cut list
 
-| Week | Dates | Nicolas | Yair | Together |
-| --- | --- | --- | --- | --- |
-| 1 Data | Thu 22 to Wed 28 Oct | 03 V-Dem, 02 UCDP, try_streamlit Ex 1 to 4 | 04 SIPRI, try_streamlit Ex 1 to 4 | Setup, 01 Crosswalk, 05 Merge |
-| 2 Analysis and app | Thu 29 Oct to Wed 4 Nov | 06 A, 07 regime and conflict charts, try_streamlit Ex 5 to 16 | 06 A, 07 arms charts, map, democracy line and main chart, try_streamlit Ex 5 to 16 | 06 B and C, app, bonus choice |
-| 3 Polish and deliver | Thu 5 to Thu 12 Nov | Bonus half, slides, report | Bonus half, slides, report | Freeze Mon 9, rehearsals |
+The course suggests self-assigned checkpoints on Oct 29, Nov 12 and Nov 26. The plan below uses them. If you are faster, move everything forward.
 
-If you fall behind, cut in this order: deployment, suppliers timeline, world map, wars-only check. Never cut the checkpoints, the decisions log or the main chart.
+| Phase | Dates | Nicolas | Yair | Together | Done when |
+| --- | --- | --- | --- | --- | --- |
+| 1 Setup and first tasks | until Thu 29 Oct | Merge practice, A1 to A3 | Merge practice, A1 to A3 | Repo, environments, 00 passes on both laptops, try_streamlit Ex 1 to 4 | Checkpoint Oct 29 |
+| 2 Data | Thu 29 Oct to Thu 12 Nov | A4 and A5 (03 V-Dem), B1 to B5 (02 UCDP) | A4 to A6 (04 SIPRI) | 01 Crosswalk, 05 Merge, basic app deployed on Streamlit Cloud | `panel.csv` on GitHub, checkpoint Nov 12 |
+| 3 Analysis and app | Thu 12 Nov to Thu 26 Nov | C1, D0 to D2, try_streamlit Ex 5 to 16 | B1 to B3, C0 to C5, try_streamlit Ex 5 to 16 | 06 Part B and C, full app, bonus | All pages work, 3 findings written, checkpoint Nov 26 |
+| 4 Polish and present | Thu 26 Nov to Fri 4 Dec | Slides for your theme | Slides for your theme | Freeze Mon 30 Nov, clean-clone test, rehearsals | Presentation Dec 4 |
+| 5 Report | until Thu 10 Dec | Your part of the report | Your part of the report | Merge and submit on OLAT | Report submitted |
+
+Ask Justinas or Gustav early about the onset definition and the bonus choice.
+
+**If you fall behind, cut in this order:**
+
+1. The top-importers table on the Overview page
+2. Suppliers timeline on the country page
+3. Part C robustness checks (keep wars only)
+4. The bonus feature
+
+Never cut the checkpoints, the decisions log, the Git history or the main chart. Most of the grade sits there.
 
 ## Troubleshooting
 
@@ -213,4 +228,5 @@ If you fall behind, cut in this order: deployment, suppliers timeline, world map
 | `ModuleNotFoundError` in Jupyter | Notebook uses a different Python | Select the `.venv` kernel in VS Code |
 | `FileNotFoundError` in the app | The CSV does not exist yet (its notebook has not run) | Run the notebook that writes it, or load only files that exist |
 | GitHub refuses the push | A file over 100 MB | Remove it from the commit, add it to `.gitignore` |
+| A change to a filtered table has no effect | Chained assignment like `df[mask]["x"] = 1` does nothing in pandas 3, without a warning | Write `df.loc[mask, "x"] = 1`, or make the filtered table with `.copy()` first and change that |
 | Merge conflict in a notebook | Outputs committed or both edited it | `nbstripout --install`; one owner per notebook |

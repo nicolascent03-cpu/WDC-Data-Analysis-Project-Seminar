@@ -9,7 +9,7 @@ look at the browser, then go to the next step. Commit after every step that work
 """
 
 # ---------------------------------------------------------------- Step 1: imports
-# Import pandas, plotly.express (as px), streamlit (as st) and os.
+# Import os, pandas (as pd), matplotlib.pyplot (as plt) and streamlit (as st).
 # Import your chart functions from panels_conflict, panels_arms and panels_analysis.
 
 
@@ -27,45 +27,46 @@ look at the browser, then go to the next step. Commit after every step that work
 # Test: st.write(panel.shape) should show the size of panel in the browser. Remove it afterwards.
 
 
-# ---------------------------------------------------------------- Step 4: navigation
-# A radio button in the sidebar with three pages: "Overview", "Country", "Analysis".
-# Hint: st.sidebar.radio(label, list_of_options) returns the chosen option.
-# Then an if / elif / else block, one part per page. Start with st.title("...") in each part.
+# ---------------------------------------------------------------- Step 4: sidebar
+# 1. A radio button in the sidebar with three pages: "Overview", "Country", "Analysis"
+#    (st.sidebar.radio(label, list_of_options) returns the chosen option).
+# 2. Below it, the country choice: a plain st.sidebar.selectbox with the sorted country names
+#    (try_streamlit exercise 8, part 8). Because it is drawn before the pages, it remembers the choice on every page
+#    (exercise 14).
+# 3. Then an if / elif / else block, one part per page. Start with st.title("...") in each part.
 
 
 # ---------------------------------------------------------------- Step 5: Overview page
 # 1. A sentence with the research question (st.write).
 # 2. A year slider from 1950 to 2025 (st.slider).
-# 3. A choice between democracy_index and arms_imports_tiv (st.radio).
-# 4. The world map for the chosen year and column (st.plotly_chart with your world_map function).
-# 5. Two global trend lines: share of countries in conflict per year, total arms imports per year.
-#    Compute them here with a small groupby on panel (one line each), then draw with px.line.
+# 3. fig, ax = plt.subplots(figsize=(10, 2.5)), then global_trends(ax, panel, year), then st.pyplot(fig).
+# 4. The top 10 importers in the chosen year as a small table (filter, sort, head, st.dataframe).
 
 
 # ---------------------------------------------------------------- Step 6: Country page
-# 1. The country choice in the sidebar (exercise 8). Draw the page radio from step 4 first, then the
-#    country choice, both ABOVE the page if / elif / else, so it is drawn on every page and remembers
-#    the choice (exercise 14, fix 1). If the search finds nothing, show st.sidebar.info and call
-#    st.stop() only inside the Country part; otherwise the other pages go blank too.
-# 2. Find the iso3 code that belongs to the chosen name (filter panel, take the first value).
-# 3. A year slider.
-# 4. Three numbers next to each other: st.columns(3), then st.metric in each column
+# 1. Find the iso3 code that belongs to the chosen name (filter panel, take the first value).
+# 2. A year slider.
+# 3. Three numbers next to each other: st.columns(3), then st.metric in each column
 #    (democracy index in that year, number of conflict years, total arms imports).
-# 5. The five timelines under each other: regime_bands, conflict_bars, democracy_line,
-#    arms_line, supplier_area. Pass the chosen year so the dashed line moves with the slider.
-#    Give every st.plotly_chart its own key (key="regime", key="conflict", ...). Two identical
-#    empty charts on one page otherwise stop the app with a duplicate element error.
-# 6. Test with a country without conflict (Switzerland) and one without imports.
+#    If the country has no row for that year, show "n/a" (exercise 10).
+# 4. The five timelines as one figure, exactly as in the "Final look check" of 07_charts:
+#      fig, axes = plt.subplots(5, 1, sharex=True, figsize=(10, 8))
+#      regime_bands(axes[0], ...), conflict_bars(axes[1], ...), democracy_line(axes[2], ...),
+#      arms_line(axes[3], ...), supplier_bars(axes[4], ...)
+#      plt.tight_layout()
+#      st.pyplot(fig)
+# 5. Test with a country without conflict (Switzerland) and one without imports.
 
 
 # ---------------------------------------------------------------- Step 7: Analysis page
-# 1. The main chart (main_chart with event_time).
-# 2. How many onsets are in each group (from event_time or a small table you saved in 06).
+# 1. The main chart: fig, ax = plt.subplots(figsize=(8, 4)), main_chart(ax, event_time), st.pyplot(fig).
+# 2. How many onsets are in each group (from event_time at t = 0).
 # 3. Your three findings and the sentence on what the chart cannot show (st.markdown).
 
 
 # ---------------------------------------------------------------- Step 8: bonus feature
 # Add it only after steps 1 to 7 work. Build it in your try_streamlit file first.
-# For the country comparison, use st.columns(2) and different keys for left and right charts
-# (key="conflict_left", key="conflict_right"). Also give the two country dropdowns different keys
-# (key="country_left", key="country_right"), otherwise Streamlit stops with a duplicate element error.
+# For the country comparison: st.columns(2), one stacked figure per column, and two country
+# dropdowns with different keys (key="country_left", key="country_right"), and two year sliders with
+# different keys (key="year_left", key="year_right"), otherwise Streamlit stops with a duplicate
+# element error.

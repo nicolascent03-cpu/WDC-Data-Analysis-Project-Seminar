@@ -66,7 +66,9 @@ Every notebook and app file uses exactly these names for tables and files that a
 | --- | --- |
 | `regime_colours` | one colour per regime label |
 | `intensity_colours` | colours for "minor" and "war" |
-| Timeline layout | x-axis 1950 to 2025, height 180, margins `dict(l=60, r=10, t=30, b=10)`, `fig.update_yaxes(automargin=False)`, legend above, short chart title, y-axis title with unit, no x-axis title |
+| Chart functions | draw on the `ax` they receive (first argument), return nothing, use only their arguments (the colour dictionaries at the top of the file are the one exception) |
+| Timeline rules | `ax.set_xlim(1950, 2025)`, a short title (`ax.set_title`), a y-label with the unit where there are numbers, `ax.set_yticks([])` for the band charts, a dashed line `ax.axvline(year, linestyle="--", color="grey")` when `year` is given, an `ax.text(...)` message when there is no data (band and supplier charts) |
+| Country page | `fig, axes = plt.subplots(5, 1, sharex=True, figsize=(10, 8))`, then the five functions, `plt.tight_layout()`, `st.pyplot(fig)` |
 
 ## Decisions log
 

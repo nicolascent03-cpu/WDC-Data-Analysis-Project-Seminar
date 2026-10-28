@@ -18,7 +18,8 @@ Add a line every time you use AI for the project, in your own words, on the same
 - All analysis and app code (everything except the setup, loading and checkpoint cells listed above)
 - All decisions in the decisions log (`CONVENTIONS.md`)
 - The analysis, the findings and their interpretation
-- Slides, report and presentation
+- Slides and presentation
+- The final report (written without AI, as the course requires)
 
 ## Log
 
@@ -26,4 +27,6 @@ Add a line every time you use AI for the project, in your own words, on the same
 | --- | --- | --- | --- | --- |
 | 27.10.2026 | Both | Planning | Project plan, repo structure, guided notebooks | We chose the research question and the datasets with AI help; AI turned the plan into tasks |
 | 27.10.2026 | Both | Repo review | Review of notebooks, app files and guides (two rounds) | Fixed run order, owners, file names and checkpoints |
+| 27.10.2026 | Nicolas | Sandboxes | Sandboxes were too hard; rebuilt with worked examples using only lecture tools (weeks 2 to 5), charts in matplotlib | Each task now starts with an explanation and an example; we write the project code ourselves |
+| 27.10.2026 | Both | Final check | Switch of all charts to matplotlib, world map removed, third review of notebooks, app and guides | Fixed wording, names and two checkpoints |
 |  |  |  |  |  |

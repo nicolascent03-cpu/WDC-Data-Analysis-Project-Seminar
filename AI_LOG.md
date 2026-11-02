@@ -30,3 +30,6 @@ Add a line every time you use AI for the project, in your own words, on the same
 | 27.10.2026 | Nicolas | Sandboxes | Sandboxes were too hard; rebuilt with worked examples using only lecture tools (weeks 2 to 5), charts in matplotlib | Each task now starts with an explanation and an example; we write the project code ourselves |
 | 27.10.2026 | Both | Final check | Switch of all charts to matplotlib, world map removed, third review of notebooks, app and guides | Fixed wording, names and two checkpoints |
 |  |  |  |  |  |
+
+
+#2.11.2026: So far using AI mostly for comprehension in the tasks and general fixing of what i wrote. the task guide is very loose and then i like create a dataframe and not a list or something and forget brackets/add them when they arent needed in like a print function with like .shape(). ai tells me shape is stored as a tuple. what??? but now head needs the brackets. its very confusing. also used claude code desktop to help me navigate the huge vdem file and understanding quickly what each column we work with are about 

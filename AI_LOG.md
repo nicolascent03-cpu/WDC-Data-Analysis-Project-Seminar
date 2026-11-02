@@ -32,4 +32,11 @@ Add a line every time you use AI for the project, in your own words, on the same
 |  |  |  |  |  |
 
 
-#2.11.2026: So far using AI mostly for comprehension in the tasks and general fixing of what i wrote. the task guide is very loose and then i like create a dataframe and not a list or something and forget brackets/add them when they arent needed in like a print function with like .shape(). ai tells me shape is stored as a tuple. what??? but now head needs the brackets. its very confusing. also used claude code desktop to help me navigate the huge vdem file and understanding quickly what each column we work with are about 
+#What we had to drop: # Dropped 1 row: Turkmenistan 1990 had missing democracy_index and regime_type. Not accounted for
+
+
+
+
+
+#02.11.2026: So far using AI mostly for comprehension in the tasks and general fixing of what i wrote. the task guide is very loose and then i like create a dataframe and not a list or something and forget brackets/add them when they arent needed in like a print function with like .shape(). ai tells me shape is stored as a tuple. what??? but now head needs the brackets. its very confusing. also used claude code desktop to help me navigate the huge vdem file and understanding quickly what each column we work with are about.
+#02.11.2026: I sometimes have the right approach but miss certain crucial things. i need ai in ask mode to help me guide through the task, because im given the structure but i dont understand what to put inside/what the task wants from me and why. but sometimes i also hit it right the first time

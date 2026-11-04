@@ -37,6 +37,7 @@ Add a line every time you use AI for the project, in your own words, on the same
 
 
 
-
+#Nicolas Notes
 #02.11.2026: So far using AI mostly for comprehension in the tasks and general fixing of what i wrote. the task guide is very loose and then i like create a dataframe and not a list or something and forget brackets/add them when they arent needed in like a print function with like .shape(). ai tells me shape is stored as a tuple. what??? but now head needs the brackets. its very confusing. also used claude code desktop to help me navigate the huge vdem file and understanding quickly what each column we work with are about.
 #02.11.2026: I sometimes have the right approach but miss certain crucial things. i need ai in ask mode to help me guide through the task, because im given the structure but i dont understand what to put inside/what the task wants from me and why. but sometimes i also hit it right the first time. On things i write badly or have errors in, i ask how to fix my version and not copy the version ai gives me back as the correct working one that may be shorter and more concisely written.
+#04.11.2026: The coding is getting increasingly complex, I had claude write the instructions too loosely and need increasingly more aid by the copilot in helping me code what i want to do the further i go. its not like theyre hard tasks, its just not giving me enough structure to figure it out myself. and even after lots of work with aid, i need help fixing errors which i dont know how to fix myself.

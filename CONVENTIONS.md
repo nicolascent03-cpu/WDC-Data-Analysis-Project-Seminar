@@ -76,4 +76,6 @@ Every notebook and app file uses exactly these names for tables and files that a
 | --- | --- | --- | --- |
 |  | 05 | Missing SIPRI value = 0 | No delivery recorded means no imports |
 |  | 05 | Missing UCDP value = 0 | No conflict recorded means no conflict |
-|  |  |  |  |
+| 2026-11-11 | 01 | Map SIPRI “Congo” to COG, “Cote d'Ivoire” to CIV, and “eSwatini” to SWZ | These recipients match Republic of the Congo, Ivory Coast, and Eswatini in V-Dem. |
+| 2026-11-11 | 04 | After these mappings, 571 SIPRI rows (29,569.98 TIV) remain unmatched | Biafra, Czechoslovakia, Katanga, Tonga, and Western Sahara have no matching V-Dem unit. SIPRI’s “Palestine” is ambiguous between V-Dem’s West Bank and Gaza units; resolve its treatment with the partner before finalizing exclusions. |
+| 2026-11-11 | 04 | Exclude 571 unmatched SIPRI rows (29,569.98 TIV), including Palestine | These recipient names do not have an unambiguous V-Dem match; Palestine could refer to the separate West Bank or Gaza units, so we leave it out rather than assign it arbitrarily. |

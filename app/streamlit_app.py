@@ -12,9 +12,39 @@ look at the browser, then go to the next step. Commit after every step that work
 # Import os, pandas (as pd), matplotlib.pyplot (as plt) and streamlit (as st).
 # Import your chart functions from panels_conflict, panels_arms and panels_analysis.
 
+import os
+import pandas as pd
+import matplotlib.pyplot as plt
+import streamlit as st
+
+from panels_conflict import regime_bands, conflict_bars
 
 # ---------------------------------------------------------------- Step 2: page settings
 # Use st.set_page_config with a page title and layout="wide".
+
+st.set_page_config(page_title="Conflict, Democracy and Arms", layout="wide")
+
+
+st.set_page_config(page_title="Conflict, Democracy and Arms", layout="wide")
+
+CLEAN = os.path.join(os.path.dirname(__file__), "..", "data", "clean")
+
+
+@st.cache_data
+def load(name):
+    path = os.path.join(CLEAN, name + ".csv")
+    return pd.read_csv(path)
+
+
+# panel.csv does not exist until 05 is done. Until then, vdem stands in for it.
+# After the merge: change "vdem" to "panel" in the next line.
+
+panel = load("vdem")
+vdem_regime_spans = load("vdem_regime_spans")
+ucdp_spans = load("ucdp_spans")
+sipri_suppliers = load("sipri_suppliers")
+
+st.write(panel.shape)
 
 
 # ---------------------------------------------------------------- Step 3: load the data
@@ -35,6 +65,18 @@ look at the browser, then go to the next step. Commit after every step that work
 #    (exercise 14).
 # 3. Then an if / elif / else block, one part per page. Start with st.title("...") in each part.
 
+
+page = st.sidebar.radio("Page", ["Overview", "Country", "Analysis"])
+
+names = sorted(panel["country_name"].unique())
+country = st.sidebar.selectbox("Country", names)
+
+if page == "Overview":
+    st.title("Conflict, Democracy and Arms")
+elif page == "Country":
+    st.title(country)
+else:
+    st.title("Analysis")
 
 # ---------------------------------------------------------------- Step 5: Overview page
 # 1. A sentence with the research question (st.write).

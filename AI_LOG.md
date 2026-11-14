@@ -42,6 +42,7 @@ Add a line every time you use AI for the project, in your own words, on the same
 #02.11.2026: I sometimes have the right approach but miss certain crucial things. i need ai in ask mode to help me guide through the task, because im given the structure but i dont understand what to put inside/what the task wants from me and why. but sometimes i also hit it right the first time. On things i write badly or have errors in, i ask how to fix my version and not copy the version ai gives me back as the correct working one that may be shorter and more concisely written.
 #04.11.2026: The coding is getting increasingly complex, I had claude write the instructions too loosely and need increasingly more aid by the copilot in helping me code what i want to do the further i go. its not like theyre hard tasks, its just not giving me enough structure to figure it out myself. and even after lots of work with aid, i need help fixing errors which i dont know how to fix myself.
 #12.11.2026: Continuation on part D.
+#13.11.2026: Copied code out of the sandbox into the other files, then started already on some streamlit with a basic page and a country selector so far. Next is
 
 #Yair Notes
 #10.11.2026: I worked about 5 hours on actual code till now and i mostly used copilot in ask mode to understand what certain commands do/ how certain pandas work. We created a cheatsheet for pandas but sometimes its difficult to understand what arguments are needed in a pandas function. I also feel like the code i need to write gets more complex as i advance and merge different tables.

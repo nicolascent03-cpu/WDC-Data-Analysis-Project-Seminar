@@ -44,5 +44,9 @@ Add a line every time you use AI for the project, in your own words, on the same
 #12.11.2026: Continuation on part D.
 #13.11.2026: Copied code out of the sandbox into the other files, then started already on some streamlit with a basic page and a country selector so far. Next is
 
+#14.11.2026: continued on merge and analysis notebooks, checking onset wars and sorting all countries conflicts with t = 0 so they can be compared for democracy and import amount. sorted importers into two groups: high and low importers
+
+
+
 #Yair Notes
 #10.11.2026: I worked about 5 hours on actual code till now and i mostly used copilot in ask mode to understand what certain commands do/ how certain pandas work. We created a cheatsheet for pandas but sometimes its difficult to understand what arguments are needed in a pandas function. I also feel like the code i need to write gets more complex as i advance and merge different tables.

@@ -162,3 +162,189 @@ HOW THE FINISHED APP SHOULD LOOK AND FEEL
 # Exercise 16: COMPARE YOURSELF WITH THE GOAL.
 # Look at the description at the top of this file and at your page. Write three things in a comment
 # that are still different, and how you would fix them in the real app.
+
+
+
+import os
+import pandas as pd
+import matplotlib.pyplot as plt
+import plotly.express as px
+import streamlit as st
+
+from panels_conflict import regime_bands, conflict_bars
+
+st.set_page_config(page_title="Weapons · Democracy · Conflict", layout="wide")
+
+CLEAN = os.path.join(os.path.dirname(__file__), "..", "data", "clean")
+
+
+@st.cache_data
+def load(name):
+    path = os.path.join(CLEAN, name + ".csv")
+    return pd.read_csv(path)
+
+
+panel = load("panel")
+vdem_regime_spans = load("vdem_regime_spans")
+ucdp_spans = load("ucdp_spans")
+sipri_suppliers = load("sipri_suppliers")
+event_time = load("event_time")
+
+names = sorted(panel["country_name"].unique())
+
+regime_colours = {
+    "closed autocracy": "#b8322f",
+    "electoral autocracy": "#efa08d",
+    "electoral democracy": "#9ec5f4",
+    "liberal democracy": "#1c5cab",
+}
+
+plt.rcParams["font.family"] = "sans-serif"
+plt.rcParams["axes.spines.top"] = False
+plt.rcParams["axes.spines.right"] = False
+plt.rcParams["axes.edgecolor"] = "#c6c1b8"
+plt.rcParams["axes.facecolor"] = "#fdfcfa"
+plt.rcParams["figure.facecolor"] = "#fdfcfa"
+plt.rcParams["axes.grid"] = True
+plt.rcParams["grid.color"] = "#e4e1da"
+plt.rcParams["xtick.color"] = "#55514b"
+plt.rcParams["ytick.color"] = "#55514b"
+plt.rcParams["axes.labelcolor"] = "#55514b"
+
+
+def style_map(fig):
+    fig.update_geos(projection_type="natural earth", showframe=False, showcoastlines=False, showland=True, landcolor="#e3e0d9", showocean=False, bgcolor="rgba(0,0,0,0)", center=dict(lat=50, lon=15), projection_scale=0.8)
+    fig.update_layout(height=430, margin=dict(l=0, r=0, t=0, b=0), legend_title_text="",
+                      paper_bgcolor="rgba(0,0,0,0)",
+                      legend=dict(orientation="h", y=-0.02, x=0))
+
+
+# a click on the map stores a country in "goto"; here, before the widgets are drawn, we switch to it
+if "goto" in st.session_state:
+    st.session_state["country_box"] = st.session_state["goto"]
+    st.session_state["page_nav"] = "Country timeline"
+    del st.session_state["goto"]
+    if "map" in st.session_state:
+        del st.session_state["map"]
+
+if "country_box" not in st.session_state:
+    st.session_state["country_box"] = "Ukraine"
+if "page_nav" not in st.session_state:
+    st.session_state["page_nav"] = "Overview"
+
+col_title, col_nav, col_search = st.columns([2, 3, 2], vertical_alignment="center")
+with col_title:
+    st.markdown("#### Weapons · Democracy · Conflict")
+with col_nav:
+    page = st.segmented_control("Page", ["Overview", "Country timeline", "Data and method"],
+                                label_visibility="collapsed", key="page_nav")
+with col_search:
+    country = st.selectbox("Search a country", names, label_visibility="collapsed", key="country_box")
+
+if page is None:
+    page = "Overview"
+
+st.divider()
+
+if page == "Overview":
+    st.caption("RESEARCH QUESTION")
+    st.header("What happens to democracy during and after armed conflict?")
+    st.write("And does it look different in countries that import many weapons? "
+             "UCDP armed conflicts, V-Dem democracy scores and SIPRI arms transfers, 1950 to 2025.")
+
+    col_map, col_find = st.columns([3, 2])
+
+    with col_map:
+        with st.container(border=True):
+            map_year = st.slider("Year", 1950, 2025, 2000, key="map_year")
+            show_conflicts = st.toggle("Show active conflicts", value=True)
+            animate = st.toggle("Play through the years", value=False)
+
+            if animate:
+                fig = px.choropleth(panel.sort_values("year"), locations="iso3", color="regime_label",
+                                    hover_name="country_name", animation_frame="year",
+                                    color_discrete_map=regime_colours)
+                style_map(fig)
+                st.plotly_chart(fig, width="stretch")
+                st.caption("Press play under the map. Clicking countries works in the normal map.")
+            else:
+                map_data = panel[panel["year"] == map_year]
+                if show_conflicts:
+                    calm = map_data[map_data["conflict_active"] == 0]
+                    war = map_data[map_data["conflict_active"] == 1]
+                    fig = px.choropleth(calm, locations="iso3", color="regime_label",
+                                        hover_name="country_name", color_discrete_map=regime_colours)
+                    fig.update_traces(marker_opacity=0.35)
+                    war_fig = px.choropleth(war, locations="iso3", color="regime_label",
+                                            hover_name="country_name", color_discrete_map=regime_colours)
+                    war_fig.update_traces(marker_line_color="#1c1a17", marker_line_width=1.2,
+                                          showlegend=False)
+                    for trace in war_fig.data:
+                        fig.add_trace(trace)
+                else:
+                    fig = px.choropleth(map_data, locations="iso3", color="regime_label",
+                                        hover_name="country_name", color_discrete_map=regime_colours)
+                style_map(fig)
+                event = st.plotly_chart(fig, width="stretch", on_select="rerun",
+                                        selection_mode="points", key="map")
+                points = event.selection.points
+                if len(points) > 0:
+                    clicked = points[0]["location"]
+                    match = panel[panel["iso3"] == clicked]
+                    if len(match) > 0:
+                        st.session_state["goto"] = match["country_name"].iloc[0]
+                        st.rerun()
+                st.caption("Strong colour with dark outline: active armed conflict in this year. "
+                           "Faded: no conflict. Click a country to open its timeline.")
+
+    with col_find:
+        with st.container(border=True):
+            st.caption("MAIN FINDING")
+            st.subheader("Democracy around the start of a conflict")
+            st.write("Change in the democracy index compared with the year before onset, "
+                     "high vs. low arms importers.")
+
+            fig2, ax = plt.subplots(figsize=(5, 3.5))
+            high = event_time[event_time["importer_group"] == "high importer"]
+            low = event_time[event_time["importer_group"] == "low importer"]
+            ax.plot(high["t"], high["dem_change"], color="#eb6834", label="High arms imports")
+            ax.plot(low["t"], low["dem_change"], color="#2a78d6", label="Low arms imports")
+            ax.axvline(0, linestyle="--", color="grey")
+            ax.axhline(0, color="lightgrey")
+            ax.set_xlabel("Years since conflict start")
+            ax.set_ylabel("Change in democracy index")
+            ax.legend(frameon=False)
+            st.pyplot(fig2)
+            plt.close(fig2)
+
+            with st.expander("Show the numbers"):
+                st.dataframe(event_time, hide_index=True)
+
+    s1, s2, s3 = st.columns(3)
+    with s1:
+        with st.container(border=True):
+            st.markdown("**UCDP/PRIO Armed Conflict v26.1**")
+            st.caption("Conflicts with at least 25 battle deaths in a year. Intensity per conflict-year.")
+    with s2:
+        with st.container(border=True):
+            st.markdown("**V-Dem v16 (Core)**")
+            st.caption("Electoral democracy index from 0 to 1 and the four Regimes of the World categories.")
+    with s3:
+        with st.container(border=True):
+            st.markdown("**SIPRI Arms Transfers**")
+            st.caption("Deliveries of major conventional arms in TIV. TIV measures military capability, not price.")
+
+elif page == "Country timeline":
+    st.write("Timeline for", country, "comes in steps 3 and 4")
+else:
+    st.write("Data and method comes in step 5")
+
+base = "light"
+backgroundColor = "#f4f3ef"
+secondaryBackgroundColor = "#fdfcfa"
+textColor = "#1c1a17"
+primaryColor = "#96331a"
+borderColor = "#e4e1da"
+baseRadius = "medium"
+font = "IBM Plex Sans:https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap"
+headingFont = "IBM Plex Sans Condensed:https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@500;600&display=swap"

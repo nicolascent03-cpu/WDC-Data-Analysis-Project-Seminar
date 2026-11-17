@@ -46,6 +46,8 @@ Add a line every time you use AI for the project, in your own words, on the same
 
 #14.11.2026: continued on merge and analysis notebooks, checking onset wars and sorting all countries conflicts with t = 0 so they can be compared for democracy and import amount. sorted importers into two groups: high and low importers
 
+#17.11.2026: Before, I had vibecoded a nice working website in streamlit, now I had it create another jupiter notebook to help us try ourselves at the task of writing the code for the website, so now weve got app guide ipynb, where we both work and try to write the parts that make up the website. Started with mine, progress up to task 4.
+
 
 
 #Yair Notes

@@ -4,3 +4,4 @@ matplotlib>=3.8
 streamlit>=1.50
 jupyter
 nbstripout
+plotly

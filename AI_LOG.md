@@ -50,3 +50,5 @@ Add a line every time you use AI for the project, in your own words, on the same
 
 #Yair Notes
 #10.11.2026: I worked about 5 hours on actual code till now and i mostly used copilot in ask mode to understand what certain commands do/ how certain pandas work. We created a cheatsheet for pandas but sometimes its difficult to understand what arguments are needed in a pandas function. I also feel like the code i need to write gets more complex as i advance and merge different tables.
+
+#16.11.2026: By now i finished big parts of my code and i continued using copilot in ask mode but i also learned some of the pandas commands by now so its quite satifying not needing to look them up all the time. tbf i think i also had some easy tasks and the next part(creating the charts out of the finished dataset) will be harder. so maybe i will need to rely more on ai in this next part

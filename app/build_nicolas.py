@@ -216,7 +216,7 @@ def style_map(fig):
     fig.update_geos(projection_type="natural earth", showframe=False, showcoastlines=False, showland=True, landcolor="#e3e0d9", showocean=False, bgcolor="rgba(0,0,0,0)", center=dict(lat=50, lon=15), projection_scale=0.8)
     fig.update_layout(height=430, margin=dict(l=0, r=0, t=0, b=0), legend_title_text="",
                       paper_bgcolor="rgba(0,0,0,0)",
-                      legend=dict(orientation="h", y=-0.02, x=0))
+                      legend=dict(orientation="h", y=-0.20, x=0))
 
 
 # a click on the map stores a country in "goto"; here, before the widgets are drawn, we switch to it

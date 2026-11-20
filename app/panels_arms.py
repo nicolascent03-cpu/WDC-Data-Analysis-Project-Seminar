@@ -55,7 +55,7 @@ def supplier_bars(ax, suppliers, iso3, year=None):
         ax.set_ylabel("TIV, millions")
         ax.set_xlim(1950, 2025)
         if year is not None:
-                ax.axvline(year, linestyle="--", color="grey")
+            ax.axvline(year, linestyle="--", color="grey")
         ax.legend(fontsize=7, loc="upper left" )
 
 #share of countries in active conflict over time
@@ -66,4 +66,5 @@ def global_trends(ax, panel, year=None):
     ax.set_xlim(1950, 2025)
     ax.set_title("Share of countries in conflict")
     ax.set_ylabel("share")
-    ax.axvline(2000, linestyle="--", color="grey")
+    if year is not None:
+        ax.axvline(year, linestyle="--", color="grey")

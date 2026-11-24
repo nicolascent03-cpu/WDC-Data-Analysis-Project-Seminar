@@ -246,7 +246,9 @@ td.n, th.n { text-align: right; font-family: var(--f-mono); }
 .big .dl-k { stroke-width: 3; }
 .big .legend { font-size: 14px; }
 .pnl-h h3 span { font-family: var(--f-sans); font-weight: 400; color: var(--muted); font-size: 13px; letter-spacing: 0; }
-.scroll { max-height: 182px; overflow-y: auto; overflow-x: hidden; scrollbar-gutter: stable; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); overscroll-behavior: contain; }
+.scroll { max-height: 182px; overflow-y: auto; overflow-x: hidden; scrollbar-gutter: stable; border: 0; box-shadow: inset 0 0 0 1px var(--line); border-radius: 8px; background: var(--bg); overscroll-behavior: contain; }
+/* a list that fits shows everything and does not scroll at all (no gutter, no wheel capture) */
+.scroll.fits { overflow: hidden; scrollbar-gutter: auto; overscroll-behavior: auto; }
 .scroll::-webkit-scrollbar { width: 8px; }
 .scroll::-webkit-scrollbar-thumb { background: var(--axis); border-radius: 4px; }
 .scroll svg, .tl svg { display: block; }
@@ -2173,7 +2175,7 @@ svg, .flx-river, .flx-chord, .ov-river, .ov-side { -webkit-user-select: none; us
     const w = d.offsetWidth - d.clientWidth - b; d.remove();
     return (SBW = Math.max(0, Math.round(w)));
   }
-  const innerW = (g) => g.W - 2 - sbw();
+  const innerW = (g) => g.W - sbw();
   function supColors(iso) {
     const sups = D.suppliers[iso] || [], map = {};
     let n = 0;
@@ -2865,6 +2867,13 @@ svg, .flx-river, .flx-chord, .ov-river, .ov-side { -webkit-user-select: none; us
       el.innerHTML = compareHtml(g);
       el.dataset.u = g.u; el.dataset.l = L;
       el.querySelectorAll("[data-sc]").forEach((x) => drawScatter(x, g.W));
+    });
+    document.querySelectorAll("#cols .scroll").forEach((sc) => {
+      const svg = sc.querySelector("svg"), h = svg ? +svg.getAttribute("height") : 0;
+      const max = parseFloat(getComputedStyle(sc).maxHeight);
+      const fits = !(max > 0) || h <= max;
+      sc.classList.toggle("fits", fits);
+      if (fits) sc.removeAttribute("tabindex"); else sc.setAttribute("tabindex", "0");
     });
     applyHl();
   }

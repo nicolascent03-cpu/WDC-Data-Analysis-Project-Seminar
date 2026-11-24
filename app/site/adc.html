@@ -511,8 +511,8 @@ tr.ck-dim, .cblock.ck-dim, .chip.ck-dim, .lgk-w.ck-dim { opacity: .4; }
 .map-selpop .hint-s { color: var(--muted); font-size: 12px; }
 .map-tip { position: absolute; right: var(--sp-2); bottom: var(--sp-2); margin: 0; padding: 2px var(--sp-2); border-radius: var(--r-pill); background: var(--surface); border: 1px solid var(--line); font-size: 12px; color: var(--muted); pointer-events: none; }
 #v-country [data-pnl], #v-country [data-flxcmp] { scroll-margin-top: 84px; }
-.ov-dock .speed { flex: none; flex-wrap: nowrap; gap: 2px; }
-.ov-dock .speed .btn { min-height: 32px; padding: 0 9px; font-size: 13px; }
+.ct-dock .speed { flex: none; flex-wrap: nowrap; gap: 2px; }
+.ct-dock .speed .btn { min-height: 32px; padding: 0 9px; font-size: 13px; }
 .mode-snap #map-shapes path, .mode-snap #map-dots *, .mode-snap .ov-side *, .mode-snap #map-bubbles * { transition: none !important; animation: none !important; }
 .flx-cmap .flx-shapes path { fill: var(--nodata); stroke: var(--surface); stroke-width: .6; }
 .flx-cmap .flx-shapes path:hover { stroke: var(--ink); stroke-width: 1.2; }
@@ -758,7 +758,14 @@ svg, .flx-river, .flx-chord, .ov-river, .ov-side { -webkit-user-select: none; us
         <input id="map-year" type="range" min="1950" max="2025" step="1" value="2000">
         <output for="map-year" id="map-year-o">2000</output>
       </div>
-      
+      <div class="ct-time">
+        <span class="small muted">Period</span>
+        <div class="seg" role="group" aria-label="Period">
+          <button class="btn" type="button" data-mperiod="1950-2025" aria-pressed="true">1950–2025</button>
+          <button class="btn" type="button" data-mperiod="1950-1991" aria-pressed="false">Cold War</button>
+          <button class="btn" type="button" data-mperiod="1992-2025" aria-pressed="false">Since 1992</button>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -788,6 +795,12 @@ svg, .flx-river, .flx-chord, .ov-river, .ov-side { -webkit-user-select: none; us
     <div class="cols" id="cols"></div>
     <!-- year control: floats at the bottom of the visible part of the page (positioned by dockInit) -->
     <div class="ct-dock" id="ct-dock" role="group" aria-label="Year and period">
+      <button class="btn primary" type="button" id="ct-play" aria-label="Play years"></button>
+      <div class="seg speed" role="group" aria-label="Play speed">
+        <button class="btn btn-s" type="button" data-speed="0.5" aria-pressed="false">0.5×</button>
+        <button class="btn btn-s" type="button" data-speed="1" aria-pressed="true">1×</button>
+        <button class="btn btn-s" type="button" data-speed="2" aria-pressed="false">2×</button>
+      </div>
       <div class="yearbox">
         <label for="ct-year" class="small muted">Year</label>
         <input id="ct-year" type="range" min="1950" max="2025" step="1" value="1977">
@@ -1008,6 +1021,7 @@ svg, .flx-river, .flx-chord, .ov-river, .ov-side { -webkit-user-select: none; us
     for (const v of ["start", "overview", "country", "notes"]) $("#v-" + v).hidden = v !== view;
     document.querySelectorAll(".tab").forEach((t) => t.setAttribute("aria-current", t.dataset.view === view ? "page" : "false"));
     if (view !== "overview") stop("mapTimer", "#map-play");
+    if (view !== "country") stop("timer", "#ct-play");
     if (view === "country") renderCountry();
     pushHash();
     flxKick();
@@ -1642,9 +1656,26 @@ svg, .flx-river, .flx-chord, .ov-river, .ov-side { -webkit-user-select: none; us
     if (window.ADCFlows) window.ADCFlows.pace = k;
     document.documentElement.style.setProperty("--pace", String(k));
   }
-  function startMapPlay() { setTimeout(setPace, 0); playToggle("mapTimer", "#map-play", () => S.mapYear, (y) => { S.mapYear = y; updateMap(); }, () => Y0, () => Y1, Math.round((S.mapMode === "flow" ? 1500 : S.mapMode === "build" ? 1000 : 220) / (S.mapSpeed || 1))); }
+  function startMapPlay() { setTimeout(setPace, 0); playToggle("mapTimer", "#map-play", () => S.mapYear, (y) => { S.mapYear = y; updateMap(); }, () => S.mapP0, () => S.mapP1, Math.round((S.mapMode === "flow" ? 1500 : S.mapMode === "build" ? 1000 : 220) / (S.mapSpeed || 1))); }
   // Play speed 0.5× / 1× / 2×: changing it while playing restarts at the new pace
-  S.mapSpeed = 1;
+  S.mapSpeed = 1; S.mapP0 = Y0; S.mapP1 = Y1;
+  // period buttons on the World map bar: limit the slider and Play to that period
+  document.querySelectorAll("#ov-dock [data-mperiod]").forEach((b) => b.addEventListener("click", () => {
+    const [a, z] = b.dataset.mperiod.split("-").map(Number);
+    S.mapP0 = a; S.mapP1 = z;
+    document.querySelectorAll("#ov-dock [data-mperiod]").forEach((x) => x.setAttribute("aria-pressed", x === b));
+    const sl = $("#map-year"); sl.min = a; sl.max = z;
+    S.mapYear = Math.min(z, Math.max(a, S.mapYear)); updateMap();
+  }));
+  // the Countries & compare bar: same Play and speed buttons, playing through the chosen period
+  S.ctSpeed = 1;
+  function startCtPlay() { playToggle("timer", "#ct-play", () => S.year, setYear, () => S.p0, () => S.p1, Math.round(700 / (S.ctSpeed || 1))); }
+  $("#ct-play").addEventListener("click", startCtPlay);
+  document.querySelectorAll("#ct-dock [data-speed]").forEach((b) => b.addEventListener("click", () => {
+    S.ctSpeed = +b.dataset.speed;
+    document.querySelectorAll("#ct-dock [data-speed]").forEach((x) => x.setAttribute("aria-pressed", x === b));
+    if (S.timer) { stop("timer", "#ct-play"); startCtPlay(); }
+  }));
   document.querySelectorAll("#ov-dock [data-speed]").forEach((b) => b.addEventListener("click", () => {
     S.mapSpeed = +b.dataset.speed;
     document.querySelectorAll("#ov-dock [data-speed]").forEach((x) => x.setAttribute("aria-pressed", x === b));
@@ -2542,7 +2573,7 @@ svg, .flx-river, .flx-chord, .ov-river, .ov-side { -webkit-user-select: none; us
   { const hm = $(".hero-map"); if (hm) { hm.style.cursor = "pointer"; hm.title = "Open the World map at this year"; hm.addEventListener("click", () => { S.mapYear = Y1; show("overview"); window.scrollTo(0, 0); updateMap(); }); } }
 
   // ---------- start
-  $("#map-play").innerHTML = PLAY;
+  $("#map-play").innerHTML = PLAY; $("#ct-play").innerHTML = PLAY;
   buildMap(); updateMap(); buildFinding(); buildStart();
   readHash(); show(S.view);
 })();

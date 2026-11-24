@@ -628,6 +628,50 @@ svg, .flx-river, .flx-chord, .ov-river, .ov-side { -webkit-user-select: none; us
 .ov-bottom:has(details[open]) { display: block; }
 .ov-bottom:has(details[open]) #map-note { margin-bottom: var(--sp-1); }
 
+/* findings page: regression results of notebook 08 (or placeholders until they exist) */
+.ph-badge { display: inline-block; font: 600 10.5px/1.5 var(--f-sans); font-style: normal; letter-spacing: .07em; text-transform: uppercase; padding: 0 7px; border: 1px dashed color-mix(in srgb, var(--accent) 70%, transparent); border-radius: var(--r-pill); color: var(--accent); vertical-align: 2px; white-space: nowrap; }
+.fd-banner { display: flex; align-items: baseline; gap: var(--sp-3); margin: 0 0 var(--sp-5); padding: var(--sp-3) var(--sp-4); border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--line)); border-left-width: 3px; border-radius: var(--r-md); background: color-mix(in srgb, var(--accent) 7%, var(--surface)); font-size: 14px; color: var(--ink2); }
+.fd-banner b { color: var(--ink); font-weight: 600; white-space: nowrap; }
+.fd-head { margin-bottom: var(--sp-5); }
+.fd-head h1 { font-size: 32px; }
+.fd-head .lead { max-width: 80ch; }
+.fd-head .hint { margin-top: var(--sp-1); }
+.fd-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-4); align-items: start; }
+.fd-grid > .fd-wide { grid-column: 1 / -1; }
+.fd-card-h { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--sp-2) var(--sp-4); margin-bottom: var(--sp-1); }
+.fd-card-h h2 { font-size: 20px; display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-1) var(--sp-3); }
+.fd-card-h .pnl-r .btn { min-height: 32px; padding: 0 10px; font-size: 13px; }
+.fd-sub { margin: 0 0 var(--sp-3); font-size: 13px; line-height: 1.5; color: var(--ink2); max-width: 100ch; }
+.fd-card .legend { margin-bottom: var(--sp-2); }
+.fd-chart { min-width: 0; }
+.fd-chart svg { display: block; }
+.fd-card details { margin-top: var(--sp-3); }
+.fd-none { margin: var(--sp-2) 0 0; padding: var(--sp-3) var(--sp-4); border: 1px dashed var(--axis); border-radius: var(--r-md); color: var(--muted); font-size: 14px; }
+.fd-pre { fill: var(--ink); opacity: .045; }
+.fd-zero { stroke: var(--ink2); stroke-width: 1; stroke-dasharray: 4 4; }
+.fd-start { stroke: var(--ink2); stroke-width: 1.2; }
+.fd-lab { fill: var(--ink2); font: 12px var(--f-sans); }
+.fd-lab.b { fill: var(--ink); font-weight: 500; }
+.fd-axt { fill: var(--muted); font: 12px var(--f-sans); }
+.fd-ci { stroke-width: 2; stroke-linecap: round; }
+.fd-two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-6); }
+.fd-two h3 { font-size: 15px; margin-bottom: 2px; }
+.fd-two p { margin: 0 0 var(--sp-2); min-height: 3em; font-size: 13px; line-height: 1.5; color: var(--muted); } /* same height in both columns, so the two charts line up */
+.fd-fg + .fd-fg { margin-top: var(--sp-3); padding-top: var(--sp-3); border-top: 1px solid var(--line); }
+.fd-fg h3 { font-size: 15px; }
+.fd-fg p { margin: 0 0 var(--sp-1); font-size: 12.5px; color: var(--muted); }
+.fd-other { margin-top: var(--sp-4); }
+.fd-other h3 { font-size: 14px; margin-bottom: var(--sp-1); }
+.fd-lim ul { margin: var(--sp-2) 0 0; padding-left: 20px; columns: 2; column-gap: var(--sp-6); color: var(--ink2); }
+.fd-lim li { break-inside: avoid; margin-bottom: var(--sp-2); line-height: 1.55; }
+.fd-lim li::marker { color: var(--muted); }
+.fd-lim b { color: var(--ink); font-weight: 600; }
+.fd-card .tablebox { max-height: 300px; }
+.sd-share { fill: none; stroke-width: 1.5; opacity: .5; stroke-dasharray: 5 3; }
+.legend i.sd-i { height: 0; border-top: 2px solid; border-radius: 0; box-shadow: none; vertical-align: middle; }
+.legend i.sd-i.share { border-top-style: dashed; opacity: .6; }
+.notes .card p.notes-more { margin-top: var(--sp-3); }
+
 /* accessibility: visible swatch edges, bigger touch targets on phones */
 .legend i { box-shadow: inset 0 0 0 1px var(--axis); }
 @media (pointer: coarse) {
@@ -643,6 +687,7 @@ svg, .flx-river, .flx-chord, .ov-river, .ov-side { -webkit-user-select: none; us
     <nav class="tabs" aria-label="Pages">
       <button class="tab" type="button" data-view="start">Start</button>
       <button class="tab" type="button" data-view="overview">World map</button>
+      <button class="tab" type="button" data-view="findings">Findings</button>
       <button class="tab" type="button" data-view="country">Countries &amp; compare</button>
       <button class="tab" type="button" data-view="notes">About the data</button>
     </nav>
@@ -740,6 +785,7 @@ svg, .flx-river, .flx-chord, .ov-river, .ov-side { -webkit-user-select: none; us
           <p class="find-desc">Change in the democracy index compared with the year before a conflict starts (onset = first conflict year after a year of peace). High vs. low arms importers: average imports in the 5 years before onset, split at the median. Shaded: 95% confidence band.</p>
           <p class="hint">Below the zero line = less democratic than just before the conflict began.</p>
           <p id="find-text"></p>
+          <p><button class="linkbtn small" type="button" data-go="findings">See the regression results →</button></p>
           <details>
             <summary>Show the numbers</summary>
             <div class="tablebox" id="find-table"></div>
@@ -782,6 +828,33 @@ svg, .flx-river, .flx-chord, .ov-river, .ov-side { -webkit-user-select: none; us
           <button class="btn" type="button" data-mperiod="1950-1991" aria-pressed="false">Cold War</button>
           <button class="btn" type="button" data-mperiod="1992-2025" aria-pressed="false">Since 1992</button>
         </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FINDINGS: regression results of notebook 08 -->
+  <section id="v-findings" hidden>
+    <div class="fd-banner" id="fd-banner" role="note" hidden><b>Preview with placeholder numbers:</b><span>these are not real results. They show how the regression results of notebook 08 will appear; the page switches to the real numbers as soon as they exist.</span></div>
+    <div class="page-head fd-head">
+      <p class="eyebrow">Findings</p>
+      <h1>What the regressions show</h1>
+      <p class="lead">Does democracy change after an armed conflict starts, and is the change different for countries that import many weapons, or that buy them from democracies?</p>
+      <p class="hint">The models show associations, not causes: conflict, arms imports and regime change all influence each other.</p>
+    </div>
+    <div class="fd-grid">
+      <div class="card fd-card fd-wide" id="fd-es" data-pnl="fes"></div>
+      <div class="card fd-card fd-wide" id="fd-k"></div>
+      <div class="card fd-card" id="fd-forest"></div>
+      <div class="card fd-card" id="fd-sup"></div>
+      <div class="card fd-card fd-lim fd-wide">
+        <h2>Limits</h2>
+        <ul>
+          <li><b>Associations, not causes.</b> Conflict, arms imports and regime change influence each other, so no model here shows what caused what.</li>
+          <li><b>TIV is not money.</b> SIPRI trend-indicator values measure military capability transferred, not the price paid.</li>
+          <li><b>Small groups.</b> Some splits rest on few conflict onsets; wide intervals there mean the data cannot tell.</li>
+          <li><b>Historical states.</b> The Soviet Union, Yugoslavia and others are counted under a successor's code, as in V-Dem.</li>
+          <li><b>Preliminary.</b> The models of notebook 08 are still being checked; numbers can change.</li>
+        </ul>
       </div>
     </div>
   </section>
@@ -865,6 +938,7 @@ svg, .flx-river, .flx-chord, .ov-river, .ov-side { -webkit-user-select: none; us
           <li>Change: democracy index minus its value in the year before onset, averaged per group and year.</li>
           <li>The chart shows patterns. Conflict, arms imports and regime change influence each other, so it shows no causes.</li>
         </ul>
+        <p class="notes-more">The <b>Findings</b> page adds the regression results of notebook 08: models with country and year fixed effects, and an event study of the democracy index from 10 years before to 10 years after a conflict starts. Until the notebook is done, that page shows placeholder numbers and says so.</p>
       </div>
       <div class="card">
         <h2>Caveats</h2>
@@ -881,6 +955,7 @@ svg, .flx-river, .flx-chord, .ov-river, .ov-side { -webkit-user-select: none; us
 </main>
 <div id="tip" hidden></div>
 
+<script type="application/json" id="regdata">__ADC_REG__</script>
 <script type="application/json" id="data">__ADC_DATA__</script>
 <script type="application/json" id="mapdata">__ADC_MAPDATA__</script>
 <script>__ADC_FLOWS_JS__</script>
@@ -951,6 +1026,16 @@ svg, .flx-river, .flx-chord, .ov-river, .ov-side { -webkit-user-select: none; us
   const val = (iso, key, y) => { const c = C[iso]; return c ? c[key][y - Y0] : null; };
   const trunc = (s, n) => s.length > n ? s.slice(0, n - 1) + "…" : s;
   const tipAttr = (lines) => ' data-tip="' + esc(lines.join("|")) + '"';
+
+  // ---------- regression results of notebook 08 (site_page.py): "real", "demo" (placeholders) or "none" per part
+  const RG = (() => { try { return JSON.parse($("#regdata").textContent); } catch (e) { return { source: {} }; } })();
+  const RGS = RG.source || {};
+  const rgHas = (k) => RGS[k] === "real" || RGS[k] === "demo";
+  const phBadge = (k) => RGS[k] === "demo" ? ' <em class="ph-badge" title="Placeholder numbers, not real results">placeholder</em>' : "";
+  // SUPD[iso][year] = [sup_dem, share_dem]: democracy (0-1) of the suppliers, weighted by TIV, and the share of TIV from democracies
+  const SUPD = {};
+  if (rgHas("suppliers") && RG.suppliers) for (const iso in RG.suppliers) { const m = {}; for (const [y, a, b] of RG.suppliers[iso]) if (a != null) m[y] = [a, b]; SUPD[iso] = m; }
+  const supd = (iso, y) => { const m = SUPD[iso]; return m ? m[y] || null : null; };
 
   // ---------- tooltip (event delegation)
   const tip = $("#tip");
@@ -1029,17 +1114,18 @@ svg, .flx-river, .flx-chord, .ov-river, .ov-side { -webkit-user-select: none; us
       const l = h.split("-").slice(1).filter((i, k, a) => C[i] && a.indexOf(i) === k);
       if (l.length) { S.list = l; S.group = null; }
       S.view = "country";
-    } else if (h === "overview" || h === "notes") S.view = h;
+    } else if (h === "overview" || h === "findings" || h === "notes") S.view = h;
     else S.view = "start";
   }
   function show(view) {
     if (view === "compare") { view = "country"; setTimeout(() => { $("#q-cmp").scrollIntoView({ block: "center" }); $("#q-cmp").focus(); }, 60); }
     S.view = view;
-    for (const v of ["start", "overview", "country", "notes"]) $("#v-" + v).hidden = v !== view;
+    for (const v of ["start", "overview", "findings", "country", "notes"]) $("#v-" + v).hidden = v !== view;
     document.querySelectorAll(".tab").forEach((t) => t.setAttribute("aria-current", t.dataset.view === view ? "page" : "false"));
     if (view !== "overview") stop("mapTimer", "#map-play");
     if (view !== "country") stop("timer", "#ct-play");
     if (view === "country") renderCountry();
+    if (view === "findings") renderFindings();
     pushHash();
     flxKick();
   }
@@ -1809,6 +1895,249 @@ svg, .flx-river, .flx-chord, .ov-river, .ov-side { -webkit-user-select: none; us
   }
 
   // =====================================================================
+  // FINDINGS: regression results of notebook 08 (or placeholder numbers until they exist)
+  // =====================================================================
+  const sgn = (v, d = 3) => v == null || isNaN(v) ? "–" : (v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(v).toFixed(d);
+  const ciTxt = (lo, hi, d = 3) => lo == null || hi == null ? "–" : sgn(lo, d) + " to " + sgn(hi, d);
+  // a round tick step for [lo, hi] with about n intervals; ticks always include 0 when lo <= 0 <= hi
+  function niceTicks(lo, hi, n) {
+    if (!(hi > lo)) { const m = Math.abs(lo) || .01; lo -= m; hi += m; }
+    const raw = (hi - lo) / n, p = Math.pow(10, Math.floor(Math.log10(raw)));
+    let st = 10 * p; for (const m of [1, 2, 2.5, 5]) if (m * p >= raw) { st = m * p; break; }
+    const a = Math.floor(lo / st + 1e-9) * st, b = Math.ceil(hi / st - 1e-9) * st, ticks = [];
+    for (let v = a; v <= b + st / 2; v += st) ticks.push(Math.abs(v) < st / 1e6 ? 0 : +v.toPrecision(10));
+    let d = 0; while (d < 5 && Math.abs(Math.round(st * Math.pow(10, d)) - st * Math.pow(10, d)) > 1e-6) d++;
+    return { lo: a, hi: b, ticks, d };
+  }
+  const ES_GROUPS = ["all", "high importer", "low importer"];
+  const ES_COL = { "all": "var(--accent)", "high importer": "var(--hi)", "low importer": "var(--lo)" };
+  const ES_NAME = { "all": "All onsets", "high importer": "High arms importers", "low importer": "Low arms importers" };
+  S.esMode = "all";
+  // rows of one group sorted by t, with the reference year t = -1 added as a 0 point
+  function esRows(group) {
+    const rows = (RG.eventstudy || []).filter((r) => r.group === group && r.coef != null && r.t != null);
+    if (!rows.length) return [];
+    if (!rows.some((r) => r.t === -1)) rows.push({ t: -1, group, coef: 0, ci_low: 0, ci_high: 0, n: null, ref: true });
+    return rows.slice().sort((a, b) => a.t - b.t);
+  }
+  const tLab = (t) => t === 0 ? "Onset year (t = 0)" : t === -1 ? "1 year before (t = −1, reference)" : (t > 0 ? t + " year" + (t > 1 ? "s" : "") + " after" : -t + " years before") + " (t = " + sgn(t, 0) + ")";
+  function esChart(W) {
+    const groups = S.esMode === "all" ? ["all"] : ["high importer", "low importer"];
+    const data = groups.map((g) => [g, esRows(g)]).filter(([, r]) => r.length);
+    if (!data.length) return '<p class="fd-none">No event-study results for ' + (S.esMode === "all" ? "all onsets" : "high and low importers") + " yet.</p>";
+    const big = isBig("fes"), H = big ? 560 : 330, Lm = 60, Rm = 16, T = 26, B = 42;
+    let lo = 0, hi = 0, t0 = -10, t1 = 10;
+    for (const [, r] of data) for (const p of r) { lo = Math.min(lo, p.ci_low ?? p.coef); hi = Math.max(hi, p.ci_high ?? p.coef); t0 = Math.min(t0, p.t); t1 = Math.max(t1, p.t); }
+    const nt = niceTicks(lo, hi, big ? 8 : 5), nT = t1 - t0 + 1, cw = (W - Lm - Rm) / nT;
+    const x = (t) => Lm + (t - t0 + .5) * cw, y = (v) => T + (nt.hi - v) / (nt.hi - nt.lo) * (H - T - B);
+    let s = '<svg width="' + W + '" height="' + H + '" role="img" aria-label="Event study: change in the democracy index from 10 years before to 10 years after conflict onset">';
+    s += '<rect class="fd-pre" x="' + Lm + '" y="' + T + '" width="' + (x(0) - Lm).toFixed(1) + '" height="' + (H - T - B) + '"></rect>';
+    for (const v of nt.ticks) {
+      const yy = y(v).toFixed(1);
+      s += '<line class="' + (v === 0 ? "fd-zero" : "grid") + '" x1="' + Lm + '" x2="' + (W - Rm) + '" y1="' + yy + '" y2="' + yy + '"></line>';
+      s += '<text class="tick" x="' + (Lm - 8) + '" y="' + (+yy + 4) + '" text-anchor="end">' + sgn(v, nt.d) + "</text>";
+    }
+    const every = cw >= 30 ? 1 : 2;
+    for (let t = t0; t <= t1; t++) if (t % every === 0 || t === -1) s += '<text class="tick" x="' + x(t).toFixed(1) + '" y="' + (H - B + 17) + '" text-anchor="middle">' + sgn(t, 0) + "</text>";
+    s += '<text class="fd-axt" x="' + ((Lm + W - Rm) / 2) + '" y="' + (H - 5) + '" text-anchor="middle">Years relative to conflict onset (t = −1, the year before, is the reference: 0 by definition)</text>';
+    s += '<text class="fd-axt" transform="translate(13,' + (T + (H - T - B) / 2) + ') rotate(-90)" text-anchor="middle">Change in democracy index</text>';
+    s += '<line class="fd-start" x1="' + x(0).toFixed(1) + '" x2="' + x(0).toFixed(1) + '" y1="' + (T - 6) + '" y2="' + (H - B) + '"></line>';
+    s += '<text class="fd-lab b" x="' + (x(0) + 6).toFixed(1) + '" y="' + (T - 9) + '">Conflict starts</text>';
+    s += '<text class="fd-lab" x="' + (Lm + 6) + '" y="' + (T - 9) + '">Before: should be near zero</text>';
+    for (const [g, r] of data) {
+      const col = ES_COL[g];
+      const band = "M" + r.map((p) => x(p.t).toFixed(1) + "," + y(p.ci_high ?? p.coef).toFixed(1)).join("L") + "L" + r.slice().reverse().map((p) => x(p.t).toFixed(1) + "," + y(p.ci_low ?? p.coef).toFixed(1)).join("L") + "Z";
+      s += '<path d="' + band + '" style="fill: ' + col + '; fill-opacity: ' + (data.length > 1 ? .12 : .16) + '"></path>';
+      s += '<path d="M' + r.map((p) => x(p.t).toFixed(1) + "," + y(p.coef).toFixed(1)).join("L") + '" style="fill: none; stroke: ' + col + '; stroke-width: ' + (big ? 2.6 : 2) + '; stroke-linejoin: round"></path>';
+      for (const p of r) s += '<circle cx="' + x(p.t).toFixed(1) + '" cy="' + y(p.coef).toFixed(1) + '" r="' + (p.ref ? 4 : big ? 4 : 3.2) + '" style="' + (p.ref ? "fill: var(--surface); stroke: " + col + "; stroke-width: 2" : "fill: " + col + "; stroke: var(--surface); stroke-width: 1") + '"></circle>';
+    }
+    for (let t = t0; t <= t1; t++) {
+      const lines = [tLab(t)];
+      for (const [g, r] of data) {
+        const p = r.find((q) => q.t === t);
+        lines.push(ES_NAME[g] + ": " + (!p ? "no estimate" : p.ref ? "0 (reference)" : sgn(p.coef) + " (95% CI " + ciTxt(p.ci_low, p.ci_high) + ")" + (p.n != null ? ", n = " + fmt(p.n) : "")));
+      }
+      s += '<rect class="hit" x="' + (x(t) - cw / 2).toFixed(1) + '" y="' + T + '" width="' + cw.toFixed(1) + '" height="' + (H - T - B) + '"' + tipAttr(lines) + "></rect>";
+    }
+    return s + "</svg>";
+  }
+  function esTable() {
+    const by = {}; ES_GROUPS.forEach((g) => { by[g] = {}; esRows(g).forEach((p) => { by[g][p.t] = p; }); });
+    const ts = [...new Set(ES_GROUPS.flatMap((g) => Object.keys(by[g]).map(Number)))].sort((a, b) => a - b);
+    let t = '<table><thead><tr><th class="n">t</th>' + ES_GROUPS.map((g) => '<th class="n">' + ES_NAME[g] + '</th><th class="n">95% CI</th><th class="n">n</th>').join("") + "</tr></thead><tbody>";
+    for (const yr of ts) t += '<tr><td class="n">' + sgn(yr, 0) + "</td>" + ES_GROUPS.map((g) => { const p = by[g][yr]; return !p ? '<td class="n">–</td><td class="n">–</td><td class="n">–</td>' : '<td class="n">' + (p.ref ? "0 (ref.)" : sgn(p.coef)) + '</td><td class="n">' + (p.ref ? "–" : ciTxt(p.ci_low, p.ci_high)) + '</td><td class="n">' + (p.n == null ? "–" : fmt(p.n)) + "</td>"; }).join("") + "</tr>";
+    return t + "</tbody></table>";
+  }
+  function renderEs() {
+    const el = $("#fd-es"), ok = rgHas("eventstudy") && (RG.eventstudy || []).length;
+    const seg = '<div class="seg" role="group" aria-label="Event study shows"><button class="btn" type="button" data-esmode="all" aria-pressed="' + (S.esMode === "all") + '">All onsets</button><button class="btn" type="button" data-esmode="hl" aria-pressed="' + (S.esMode === "hl") + '">High vs low importers</button></div>';
+    const legend = '<div class="legend">' + (S.esMode === "all" ? ["all"] : ["high importer", "low importer"]).map((g) => '<span><i style="background: ' + ES_COL[g] + '"></i>' + ES_NAME[g] + "</span>").join("") + '<span><i style="background: var(--ink); opacity: .25"></i>Band: 95% confidence interval</span></div>';
+    let h = '<div class="fd-card-h"><h2>Democracy before and after a conflict starts' + phBadge("eventstudy") + "</h2>" + (ok ? '<div class="pnl-r">' + seg + enlBtn("fes", "event study") + "</div>" : "") + "</div>" +
+      '<p class="fd-sub">Event study: change in the democracy index (0 to 1) compared with the year before a conflict starts, with country and year fixed effects. Below the dashed line = less democratic than just before the conflict. High vs low importers: arms imports in the 5 years before onset, split at the median.</p>';
+    if (!ok) { el.classList.remove("big"); el.innerHTML = h + '<p class="fd-none">Not available yet: the event study of notebook 08 has not been run.</p>'; return; }
+    el.classList.toggle("big", isBig("fes"));
+    h += legend + '<div class="fd-chart" id="fd-es-chart"></div><details><summary>Show the numbers</summary><div class="tablebox">' + esTable() + "</div></details>";
+    const open = el.querySelector("details[open]");
+    el.innerHTML = h;
+    if (open) el.querySelector("details").open = true;
+    const c = $("#fd-es-chart"); c.innerHTML = esChart(c.clientWidth);
+  }
+
+  // (b) A1 models: the change after onset and the extra change per sd of arms imports, k = 1 ... 10 years after onset
+  function a1Points(term) {
+    const out = [];
+    for (const r of RG.results || []) { const m = /^A1_k(\d+)$/.exec(r.model); if (m && r.term === term && r.coef != null) out.push({ ...r, k: +m[1] }); }
+    return out.sort((a, b) => a.k - b.k);
+  }
+  function kChart(pts, W, col, nt, k1, what) {
+    if (!pts.length) return '<p class="fd-none">No results for this term yet.</p>';
+    const H = 220, Lm = 56, Rm = 10, T = 10, B = 38, cw = (W - Lm - Rm) / k1;
+    const x = (k) => Lm + (k - .5) * cw, y = (v) => T + (nt.hi - v) / (nt.hi - nt.lo) * (H - T - B), cap = Math.min(10, cw * .3);
+    let s = '<svg width="' + W + '" height="' + H + '" role="img" aria-label="' + esc(what) + ' for k = 1 to ' + k1 + ' years after onset">';
+    for (const v of nt.ticks) { const yy = y(v).toFixed(1); s += '<line class="' + (v === 0 ? "fd-zero" : "grid") + '" x1="' + Lm + '" x2="' + (W - Rm) + '" y1="' + yy + '" y2="' + yy + '"></line><text class="tick" x="' + (Lm - 8) + '" y="' + (+yy + 4) + '" text-anchor="end">' + sgn(v, nt.d) + "</text>"; }
+    for (let k = 1; k <= k1; k++) s += '<text class="tick" x="' + x(k).toFixed(1) + '" y="' + (H - B + 17) + '" text-anchor="middle">' + k + "</text>";
+    s += '<text class="fd-axt" x="' + ((Lm + W - Rm) / 2) + '" y="' + (H - 4) + '" text-anchor="middle">Years after onset (k)</text>';
+    s += '<path d="M' + pts.map((p) => x(p.k).toFixed(1) + "," + y(p.coef).toFixed(1)).join("L") + '" style="fill: none; stroke: ' + col + '; stroke-width: 1.2; opacity: .45"></path>';
+    for (const p of pts) {
+      const X = x(p.k).toFixed(1), a = y(p.ci_low ?? p.coef).toFixed(1), b = y(p.ci_high ?? p.coef).toFixed(1);
+      s += '<line class="fd-ci" x1="' + X + '" x2="' + X + '" y1="' + a + '" y2="' + b + '" style="stroke: ' + col + '"></line>' +
+        '<line class="fd-ci" x1="' + (X - cap / 2) + '" x2="' + (+X + cap / 2) + '" y1="' + a + '" y2="' + a + '" style="stroke: ' + col + '; stroke-width: 1.5"></line><line class="fd-ci" x1="' + (X - cap / 2) + '" x2="' + (+X + cap / 2) + '" y1="' + b + '" y2="' + b + '" style="stroke: ' + col + '; stroke-width: 1.5"></line>' +
+        '<circle cx="' + X + '" cy="' + y(p.coef).toFixed(1) + '" r="4.5" style="fill: ' + col + '; stroke: var(--surface); stroke-width: 1.5"></circle>';
+      s += '<rect class="hit" x="' + (x(p.k) - cw / 2).toFixed(1) + '" y="' + T + '" width="' + cw.toFixed(1) + '" height="' + (H - T - B) + '"' +
+        tipAttr([p.k + " year" + (p.k > 1 ? "s" : "") + " after onset (" + p.model + ")", what + ": " + sgn(p.coef), "95% CI " + ciTxt(p.ci_low, p.ci_high), "n = " + fmt(p.n_obs) + " country-years, " + fmt(p.n_countries) + " countries"]) + "></rect>";
+    }
+    return s + "</svg>";
+  }
+  function renderK() {
+    const el = $("#fd-k"), p1 = a1Points("onset"), p2 = a1Points("onset:arms_z");
+    let h = '<div class="fd-card-h"><h2>How the effect builds up' + phBadge("results") + "</h2></div>" +
+      '<p class="fd-sub">One regression for each horizon k: the change in the democracy index from the year before onset to k years after it, with country and year fixed effects. Bars: 95% confidence intervals; an interval that crosses the dashed zero line means no clear change.</p>';
+    if (!rgHas("results") || (!p1.length && !p2.length)) { el.innerHTML = h + '<p class="fd-none">Not available yet: the A1 models of notebook 08 have not been run.</p>'; return; }
+    h += '<div class="fd-two"><div><h3>Average change after an onset</h3><p>Term <span class="num">onset</span>: countries with a conflict onset compared with those without</p><div class="fd-chart" data-kc="1"></div></div>' +
+      '<div><h3>Extra change per standard deviation of arms imports</h3><p>Term <span class="num">onset:arms_z</span>: how much more (or less) for a country importing one sd more arms before the onset</p><div class="fd-chart" data-kc="2"></div></div></div>';
+    el.innerHTML = h;
+    let lo = 0, hi = 0, k1 = 10;
+    for (const p of p1.concat(p2)) { lo = Math.min(lo, p.ci_low ?? p.coef); hi = Math.max(hi, p.ci_high ?? p.coef); k1 = Math.max(k1, p.k); }
+    const nt = niceTicks(lo, hi, 4); // one scale for both charts, so they can be compared
+    const c1 = el.querySelector('[data-kc="1"]'), c2 = el.querySelector('[data-kc="2"]');
+    c1.innerHTML = kChart(p1, c1.clientWidth, "var(--accent)", nt, k1, "Change after onset");
+    c2.innerHTML = kChart(p2, c2.clientWidth, "var(--hi)", nt, k1, "Extra change per sd of arms imports");
+  }
+
+  // (c) checks and splits: forest plot of the B, C and D models; any other model goes into a plain table
+  const FOREST = [
+    { re: /^B_/, n: "Kind of conflict (B)", d: "Extra change in the democracy index 5 years after onset for these cases, compared with the others." },
+    { re: /^C\d*_/, n: "Who supplied the arms (C)", d: "Extra change in the democracy index after onset when the arms of the 5 years before came from more democratic suppliers (0 to 1)." },
+    { re: /^D\d*_/, n: "What predicts a conflict (D)", d: "Change in the probability that a conflict starts next year (linear probability model)." },
+  ];
+  const TERM_LAB = {
+    "onset:war_onset": "War instead of minor conflict", "onset:intrastate": "Conflict inside one country",
+    "onset:post1991": "After the Cold War", "onset:democracy_t1": "Democracy just before the conflict",
+    "onset:sup_dem_pre5": "Arms from democratic suppliers", "dem_lag1": "Democracy last year",
+    "dem_lag1_sq": "Democracy squared (unstable middle)", "log_arms_lag1": "Arms imports last year (log)",
+    "onset": "Conflict onset", "onset:arms_z": "Onset × arms imports (per sd)",
+  };
+  const termLab = (t) => TERM_LAB[t] || t;
+  const modelNote = (m) => { const k = /_k(\d+)$/.exec(m); return m + (k ? " · after " + k[1] + " years" : /lpm/i.test(m) ? " · linear probability" : ""); };
+  function forestSvg(rows, W) {
+    const rh = 34, Lw = Math.min(250, Math.round(W * .44)), Rm = 24, T = 4, B = 24, H = rows.length * rh + T + B;
+    let lo = 0, hi = 0;
+    for (const r of rows) { lo = Math.min(lo, r.ci_low ?? r.coef); hi = Math.max(hi, r.ci_high ?? r.coef); }
+    const nt = niceTicks(lo, hi, 4), x = (v) => Lw + (v - nt.lo) / (nt.hi - nt.lo) * (W - Lw - Rm), nc = Math.floor((Lw - 8) / 6.6);
+    let s = '<svg width="' + W + '" height="' + H + '" role="img" aria-label="Forest plot: coefficients with 95% confidence intervals">';
+    rows.forEach((r, i) => { if (i % 2 === 0) s += '<rect class="rowbg" x="0" y="' + (T + i * rh) + '" width="' + W + '" height="' + rh + '"></rect>'; });
+    for (const v of nt.ticks) s += '<line class="' + (v === 0 ? "fd-zero" : "grid") + '" x1="' + x(v).toFixed(1) + '" x2="' + x(v).toFixed(1) + '" y1="' + T + '" y2="' + (H - B) + '"></line><text class="tick" x="' + x(v).toFixed(1) + '" y="' + (H - B + 16) + '" text-anchor="middle">' + sgn(v, nt.d) + "</text>";
+    rows.forEach((r, i) => {
+      const yc = T + i * rh + rh / 2, lab = termLab(r.term), col = (r.ci_low > 0 || r.ci_high < 0) ? "var(--accent)" : "var(--ink2)";
+      s += '<text class="fd-lab b" x="6" y="' + (yc - 2) + '">' + esc(trunc(lab, nc)) + '</text><text class="tick" x="6" y="' + (yc + 12) + '">' + esc(trunc(modelNote(r.model), nc + 4)) + "</text>";
+      s += '<line class="fd-ci" x1="' + x(r.ci_low ?? r.coef).toFixed(1) + '" x2="' + x(r.ci_high ?? r.coef).toFixed(1) + '" y1="' + yc + '" y2="' + yc + '" style="stroke: ' + col + '"></line>' +
+        '<circle cx="' + x(r.coef).toFixed(1) + '" cy="' + yc + '" r="5" style="fill: ' + col + '; stroke: var(--surface); stroke-width: 1.5"></circle>';
+      s += '<rect class="hit" x="0" y="' + (T + i * rh) + '" width="' + W + '" height="' + rh + '"' +
+        tipAttr([lab, r.model + " · " + r.term, "Coefficient " + sgn(r.coef) + (r.se != null ? " (se " + Number(r.se).toFixed(3) + ")" : ""), "95% CI " + ciTxt(r.ci_low, r.ci_high), "n = " + fmt(r.n_obs) + " country-years, " + fmt(r.n_countries) + " countries"]) + "></rect>";
+    });
+    return s + "</svg>";
+  }
+  function renderForest() {
+    const el = $("#fd-forest"), all = (RG.results || []).filter((r) => r.coef != null && r.model);
+    let h = '<div class="fd-card-h"><h2>Checks and splits' + phBadge("results") + "</h2></div>" +
+      '<p class="fd-sub">Dot: estimate; line: 95% confidence interval. Orange: the interval does not cross zero. Each group has its own scale.</p>';
+    if (!rgHas("results") || !all.length) { el.innerHTML = h + '<p class="fd-none">Not available yet: the models of notebook 08 have not been run.</p>'; return; }
+    const groups = FOREST.map((f) => ({ ...f, rows: all.filter((r) => f.re.test(r.model)) })).filter((f) => f.rows.length);
+    const other = all.filter((r) => !/^A1_k\d+$/.test(r.model) && !FOREST.some((f) => f.re.test(r.model)));
+    h += groups.map((f, i) => '<div class="fd-fg"><h3>' + esc(f.n) + "</h3><p>" + esc(f.d) + '</p><div class="fd-chart" data-fg="' + i + '"></div></div>').join("");
+    if (!groups.length) h += '<p class="fd-none">No results for the B, C or D models yet.</p>';
+    if (other.length) h += '<div class="fd-other"><h3>Other models</h3><div class="tablebox"><table><thead><tr><th>Model</th><th>Term</th><th class="n">Coef.</th><th class="n">95% CI</th><th class="n">n</th><th class="n">Countries</th></tr></thead><tbody>' +
+      other.map((r) => "<tr><td>" + esc(r.model) + "</td><td>" + esc(r.term) + '</td><td class="n">' + sgn(r.coef) + '</td><td class="n">' + ciTxt(r.ci_low, r.ci_high) + '</td><td class="n">' + fmt(r.n_obs) + '</td><td class="n">' + fmt(r.n_countries) + "</td></tr>").join("") + "</tbody></table></div></div>";
+    el.innerHTML = h;
+    groups.forEach((f, i) => { const c = el.querySelector('[data-fg="' + i + '"]'); c.innerHTML = forestSvg(f.rows, c.clientWidth); });
+  }
+
+  // (d) yearly mean supplier democracy across all recipients, and among democratic vs autocratic recipients
+  function supSeries() {
+    const out = [];
+    for (let y = Math.min(1950, Y0); y <= Math.max(2025, Y1); y++) {
+      const a = [0, 0], dm = [0, 0], au = [0, 0];
+      for (const iso in SUPD) {
+        const v = SUPD[iso][y]; if (!v || v[0] == null) continue;
+        a[0] += v[0]; a[1]++;
+        const r = val(iso, "r", y);
+        if (r === 2 || r === 3) { dm[0] += v[0]; dm[1]++; } else if (r === 0 || r === 1) { au[0] += v[0]; au[1]++; }
+      }
+      out.push({ y, all: a[1] ? a[0] / a[1] : null, n: a[1], dem: dm[1] ? dm[0] / dm[1] : null, nd: dm[1], aut: au[1] ? au[0] / au[1] : null, na: au[1] });
+    }
+    return out;
+  }
+  function renderSup() {
+    const el = $("#fd-sup");
+    let h = '<div class="fd-card-h"><h2>Who supplied the arms over time' + phBadge("suppliers") + "</h2></div>" +
+      '<p class="fd-sub">Democracy of the suppliers (0 = all arms from autocracies, 1 = from full democracies), weighted by TIV, averaged over all countries that imported arms that year.</p>';
+    if (!rgHas("suppliers") || !Object.keys(SUPD).length) { el.innerHTML = h + '<p class="fd-none">Not available yet: the supplier table of notebook 08 does not exist.</p>'; return; }
+    h += '<div class="legend"><span><i class="sd-i" style="border-color: var(--ink)"></i>All recipients</span><span><i class="sd-i" style="border-color: var(--reg3)"></i>Democratic recipients</span><span><i class="sd-i" style="border-color: var(--reg0)"></i>Autocratic recipients</span></div><div class="fd-chart" id="fd-sup-chart"></div>';
+    el.innerHTML = h;
+    const c = $("#fd-sup-chart"), W = c.clientWidth, H = 300, Lm = 40, Rm = 12, T = 22, B = 26, ser = supSeries();
+    const ya = ser[0].y, yb = ser[ser.length - 1].y, cw = (W - Lm - Rm) / (yb - ya + 1);
+    const x = (yr) => Lm + (yr - ya + .5) * cw, y = (v) => T + (1 - v) * (H - T - B);
+    let s = '<svg width="' + W + '" height="' + H + '" role="img" aria-label="Mean democracy of arms suppliers per year, 1950 to 2025">';
+    for (const v of [0, .25, .5, .75, 1]) s += '<line class="' + (v ? "grid" : "base") + '" x1="' + Lm + '" x2="' + (W - Rm) + '" y1="' + y(v) + '" y2="' + y(v) + '"></line><text class="tick" x="' + (Lm - 6) + '" y="' + (y(v) + 4) + '" text-anchor="end">' + v + "</text>";
+    for (let t = Math.ceil(ya / 10) * 10; t <= yb; t += 10) s += '<text class="tick" x="' + x(t).toFixed(1) + '" y="' + (H - B + 16) + '" text-anchor="middle">' + t + "</text>";
+    const x91 = (x(1991) + cw / 2).toFixed(1);
+    s += '<line class="fd-zero" x1="' + x91 + '" x2="' + x91 + '" y1="' + (T - 8) + '" y2="' + (H - B) + '"></line><text class="fd-lab" x="' + (+x91 + 5) + '" y="' + (T - 10) + '">1991: end of the Cold War</text>';
+    const line = (key, st) => {
+      let d = "", pen = false;
+      for (const p of ser) { if (p[key] == null) { pen = false; continue; } d += (pen ? "L" : "M") + x(p.y).toFixed(1) + "," + y(p[key]).toFixed(1); pen = true; }
+      return '<path d="' + d + '" style="fill: none; stroke-linejoin: round; ' + st + '"></path>';
+    };
+    s += line("dem", "stroke: var(--reg3); stroke-width: 1.5; opacity: .6") + line("aut", "stroke: var(--reg0); stroke-width: 1.5; opacity: .6") + line("all", "stroke: var(--ink); stroke-width: 2.4");
+    const f2 = (v) => v == null ? "–" : v.toFixed(2);
+    for (const p of ser) s += '<rect class="hit" x="' + (x(p.y) - cw / 2).toFixed(1) + '" y="' + T + '" width="' + cw.toFixed(1) + '" height="' + (H - T - B) + '"' +
+      tipAttr([String(p.y), "All recipients: " + f2(p.all) + " (" + p.n + " countries)", "Democratic recipients: " + f2(p.dem) + " (" + p.nd + ")", "Autocratic recipients: " + f2(p.aut) + " (" + p.na + ")"]) + "></rect>";
+    c.innerHTML = s + "</svg>";
+  }
+
+  // static parts once, charts on every visit and width change (they are sized from their real container width)
+  $("#fd-banner").hidden = !Object.values(RGS).some((v) => v === "demo");
+  let fdW = 0;
+  function renderFindings() {
+    if ($("#v-findings").hidden) return;
+    fdW = $("#v-findings").clientWidth;
+    renderEs(); renderK(); renderForest(); renderSup();
+  }
+  $("#v-findings").addEventListener("click", (e) => {
+    const m = e.target.closest("[data-esmode]");
+    if (m) { S.esMode = m.dataset.esmode; renderEs(); const b = $('[data-esmode="' + S.esMode + '"]'); if (b) b.focus({ preventScroll: true }); return; }
+    const en = e.target.closest("[data-enl]");
+    if (en) {
+      const id = en.dataset.enl; if (isBig(id)) delete S.big[id]; else S.big[id] = true;
+      renderEs();
+      const b = $('[data-enl="' + id + '"]'); if (b) b.focus({ preventScroll: true });
+      $("#fd-es").scrollIntoView({ block: isBig(id) ? "start" : "nearest", behavior: "smooth" });
+    }
+  });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && S.view === "findings" && isBig("fes")) { delete S.big.fes; renderEs(); } });
+  let fdRz;
+  new ResizeObserver(() => { const w = $("#v-findings").clientWidth; if (!w || w === fdW) return; clearTimeout(fdRz); fdRz = setTimeout(renderFindings, 120); }).observe($("#v-findings"));
+
+  // =====================================================================
   // COUNTRY TIMELINE
   // =====================================================================
   // L / R: label column and right margin of every timeline. geom() sets them from the real container width,
@@ -1994,6 +2323,58 @@ svg, .flx-river, .flx-chord, .ov-river, .ov-side { -webkit-user-select: none; us
     });
     s += yearLine(g, H) + "</svg>";
     return head + axisSvg(g, true) + '<div class="scroll" role="region" tabindex="0" aria-label="Supplier list' + (S.allSup ? "" : ", scrollable") + '">' + s + "</div>";
+  }
+
+  // "Who supplied the arms": TIV-weighted democracy of the suppliers per year (notebook 08, Part C), one line per
+  // country; years without imports leave gaps. Single-country mode adds a lighter line for the share from democracies.
+  function supDemLines(g, single) {
+    const big = isBig("supd"), H = Math.round((single ? 150 : 200) * (big ? 2 : 1)), top = 10, bot = H - 10, yv = (v) => bot - v * (bot - top), sl = shortLab();
+    let s = '<svg width="' + g.W + '" height="' + H + '" role="img" aria-label="Democracy of the arms suppliers per year">' + gridLines(g, H);
+    s += '<text class="lab" x="0" y="' + (top + 12) + '">' + (sl ? "Suppliers" : "Supplier democracy") + '</text><text class="sub" x="0" y="' + (top + 28) + '">0 = autocratic</text><text class="sub" x="0" y="' + (top + 42) + '">1 = democratic</text>';
+    for (const v of big ? [0, .25, .5, .75, 1] : [0, .5, 1]) s += '<line class="' + (v ? "grid" : "base") + '" x1="' + L + '" x2="' + (g.W - R) + '" y1="' + yv(v) + '" y2="' + yv(v) + '"></line><text class="tick" x="' + (L - 6) + '" y="' + (yv(v) + 4) + '" text-anchor="end">' + v + "</text>";
+    // one path with gaps; a year standing alone gets a dot so it stays visible
+    const path = (iso, idx, attrs, dotCol) => {
+      let d = "", run = [], dots = "";
+      const flush = () => { if (run.length === 1 && dotCol) dots += '<circle cx="' + run[0][0] + '" cy="' + run[0][1] + '" r="2.4" style="fill: ' + dotCol + '"' + attrs.ck + "></circle>"; if (run.length) d += run.map((p, i) => (i ? "L" : "M") + p[0] + "," + p[1]).join(""); run = []; };
+      for (let yr = S.p0; yr <= S.p1; yr++) {
+        const v = supd(iso, yr), w = v ? v[idx] : null;
+        if (w == null) { flush(); continue; }
+        run.push([(g.x(yr) + g.u / 2).toFixed(1), yv(w).toFixed(1)]);
+      }
+      flush();
+      return '<path d="' + d + '"' + attrs.p + "></path>" + dots;
+    };
+    if (single) {
+      const iso = S.list[0];
+      s += path(iso, 1, { p: ' class="sd-share" style="stroke: ' + kcol(0) + '"', ck: "" }, null) + path(iso, 0, { p: ' class="dl-k" style="stroke: ' + kcol(0) + '"', ck: "" }, kcol(0));
+      for (let yr = S.p0; yr <= S.p1; yr++) {
+        const v = supd(iso, yr);
+        s += '<rect class="hit" data-year="' + yr + '" x="' + g.x(yr) + '" y="0" width="' + g.u + '" height="' + H + '"' +
+          tipAttr(v ? [String(yr), "Supplier democracy: " + v[0].toFixed(2), "Share of TIV from democracies: " + (v[1] == null ? "–" : Math.round(v[1] * 100) + "%")] : [String(yr), "No arms imports with known suppliers"]) + "></rect>";
+      }
+    } else {
+      S.list.forEach((iso, k) => {
+        const ck = ' data-ck="' + iso + '" data-ckh="' + iso + '"';
+        s += path(iso, 0, { p: ' class="dl-k"' + ck + ' style="stroke: ' + kcol(k) + '"' + (kdash(k) ? ' stroke-dasharray="' + kdash(k) + '"' : ""), ck }, kcol(k));
+      });
+      for (let yr = S.p0; yr <= S.p1; yr++) {
+        const rows = S.list.map((iso) => [C[iso].n, supd(iso, yr)]).filter(([, v]) => v).sort((a, b) => b[1][0] - a[1][0]);
+        const lines = [String(yr)].concat(rows.slice(0, 40).map(([n, v]) => n + ": " + v[0].toFixed(2)));
+        if (rows.length > 40) lines.push("… and " + (rows.length - 40) + " more");
+        if (!rows.length) lines.push("No arms imports with known suppliers");
+        s += '<rect class="hit" data-year="' + yr + '" x="' + g.x(yr) + '" y="0" width="' + g.u + '" height="' + H + '"' + tipAttr(lines) + (rows.length > 16 ? " data-tip2" : "") + "></rect>";
+      }
+    }
+    return s + yearLine(g, H) + "</svg>";
+  }
+  function supDemPanel(g, single) {
+    const has = rgHas("suppliers"), any = has && S.list.some((iso) => { for (let y = S.p0; y <= S.p1; y++) if (supd(iso, y)) return true; return false; });
+    const legend = single ? '<div class="legend"><span><i class="sd-i" style="border-color: ' + kcol(0) + '"></i>Supplier democracy (0–1)</span><span><i class="sd-i share" style="border-color: ' + kcol(0) + '"></i>Share of TIV from democracies</span></div>'
+      : '<span class="small muted">One line per country · gaps: no imports</span>';
+    const head = '<div class="pnl-h"><h3>Who supplied the arms <span>democracy of the suppliers, weighted by TIV</span>' + phBadge("suppliers") + '</h3><div class="pnl-r">' + (any ? legend + enlBtn("supd", "supplier democracy") : "") + "</div></div>";
+    if (!has) return '<div class="pnl" data-pnl="supd">' + head + '<p class="fd-none">Not available yet: the supplier table of notebook 08 does not exist.</p></div>';
+    if (!any) return '<div class="pnl" data-pnl="supd">' + head + '<div class="empty">No arms imports with known suppliers in this period.</div></div>';
+    return '<div class="pnl' + bigCls("supd") + '" data-pnl="supd">' + head + supDemLines(g, single) + axisSvg(g, false) + "</div>";
   }
 
   function facts(iso) {
@@ -2351,7 +2732,7 @@ svg, .flx-river, .flx-chord, .ov-river, .ov-side { -webkit-user-select: none; us
   function compareHtml(g) {
     const list = S.list, n = list.length, many = n > 3;
     const noneLine = (label, names) => '<p class="none-line"><b>' + label + " (" + names.length + "):</b> " + esc(names.join(", ")) + "</p>";
-    let h = scPanel(false) + comboPanel(g, false);
+    let h = scPanel(false) + comboPanel(g, false) + supDemPanel(g, false);
     h += '<div class="pnl' + bigCls("reg") + '" data-pnl="reg"><div class="pnl-h"><h3>Regime <span>V-Dem</span></h3><div class="pnl-r">' + REG_LEGEND + enlBtn("reg", "regime rows") + "</div></div>" +
       axisSvg(g, true) + regimeRows(g) + "</div>";
     // legend: the name pins the highlight (hover or focus highlights), the eye button hides or shows the line
@@ -2474,7 +2855,7 @@ svg, .flx-river, .flx-chord, .ov-river, .ov-side { -webkit-user-select: none; us
       el.innerHTML = comboPanel(g, true) + scPanel(true) +
         '<div class="pnl' + bigCls("rd") + '" data-pnl="rd"><div class="pnl-h"><h3>Regime and democracy index <span>V-Dem</span></h3><div class="pnl-r">' + REG_LEGEND + enlBtn("rd", "regime and democracy index") + "</div></div>" + regimePanel(iso, g) + axisSvg(g, false) + "</div>" +
         '<div class="pnl' + (S.allConf ? " rows-all" : "") + '">' + conflictPanel(iso, g) + "</div>" +
-        '<div class="pnl' + bigCls("arms-" + iso) + '" data-pnl="arms-' + iso + '">' + armsPanel(iso, g) + "</div>" +
+        '<div class="pnl' + bigCls("arms-" + iso) + '" data-pnl="arms-' + iso + '">' + armsPanel(iso, g) + "</div>" + supDemPanel(g, true) +
         '<div class="pnl' + (S.allSup ? " rows-all" : "") + '">' + supplierPanel(iso, g) + axisSvg(g, false) + "</div>";
       el.dataset.u = g.u; el.dataset.l = L;
       el.querySelectorAll("[data-sc]").forEach((x) => drawScatter(x, g.W));
@@ -2637,8 +3018,8 @@ svg, .flx-river, .flx-chord, .ov-river, .ov-side { -webkit-user-select: none; us
     $("#start-groups").addEventListener("click", (e) => { const b = e.target.closest("[data-grp]"); if (b) { window.scrollTo(0, 0); openGroup(+b.dataset.grp); } });
   }
 
-  // ---------- Start page shortcuts: the main finding, and the preview map opens the World map at its year
-  $("#go-finding").addEventListener("click", () => { show("overview"); setTimeout(() => { const f = $(".card.find"); if (f) f.scrollIntoView({ behavior: "smooth", block: "start" }); }, 60); });
+  // ---------- Start page shortcuts: the Findings page, and the preview map opens the World map at its year
+  $("#go-finding").addEventListener("click", () => { window.scrollTo(0, 0); show("findings"); });
   { const hm = $(".hero-map"); if (hm) { hm.style.cursor = "pointer"; hm.title = "Open the World map at this year"; hm.addEventListener("click", () => { S.mapYear = Y1; show("overview"); window.scrollTo(0, 0); updateMap(); }); } }
 
   // ---------- start

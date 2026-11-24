@@ -39,19 +39,19 @@ at = AppTest.from_file(APP, default_timeout=60).run()
 check(not at.exception, "app runs without exception" + (f": {at.exception}" if at.exception else ""))
 check(len(at.get("iframe")) == 1, f"exactly one iframe (found {len(at.get('iframe'))})")
 
-# 2. Build the page like the app does: FILES list and placeholders read from adc_app.py.
+# 2. Build the page exactly like the app does (app/site_page.py), and check every placeholder is filled.
 print("Building the page")
-src = open(APP, encoding="utf8").read()
-files = next(ast.literal_eval(n.value) for n in ast.walk(ast.parse(src))
-             if isinstance(n, ast.Assign) and getattr(n.targets[0], "id", "") == "FILES")
-texts = {name: open(os.path.join(SITE, name), encoding="utf8").read() for name in files}
-page = texts[files[0]]
-# Placeholder -> file, in the order the app replaces them (flows.js first, data files last).
-for ph, name in [("__ADC_FLOWS_JS__", "flows.js"), ("__ADC_DATA__", "data.json"), ("__ADC_MAPDATA__", "mapdata.json")]:
-    check(ph in src, f"app uses placeholder {ph}")
-    check(ph in page, f"template contains placeholder {ph}")
-    page = page.replace(ph, texts.get(name, ""))
+sys.path.insert(0, os.path.dirname(APP))
+import site_page  # noqa: E402
+
+template = open(os.path.join(SITE, "adc.html"), encoding="utf8").read()
+for ph in ["__ADC_FLOWS_JS__", "__ADC_REG__", "__ADC_DATA__", "__ADC_MAPDATA__"]:
+    check(ph in template, f"template contains placeholder {ph}")
+page = site_page.assemble()
+texts = {name: open(os.path.join(SITE, name), encoding="utf8").read() for name in site_page.SITE_FILES}
 check("__ADC_" not in page, "no __ADC_ placeholder left in the page")
+reg = json.loads(site_page.reg_json())
+check(all(v in ("real", "demo") for v in reg["source"].values()), "regression results found: " + ", ".join(f"{k} = {v}" for k, v in reg["source"].items()))
 
 for name, keys in [("data.json", ["y0", "y1", "countries", "conflicts", "suppliers", "finding"]),
                    ("mapdata.json", ["w", "h", "p"])]:

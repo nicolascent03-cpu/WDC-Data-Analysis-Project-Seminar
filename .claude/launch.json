@@ -4,8 +4,28 @@
     {
       "name": "adc-app",
       "runtimeExecutable": ".venv/bin/streamlit",
-      "runtimeArgs": ["run", "app/adc_app.py", "--server.port", "8510", "--server.headless", "true"],
+      "runtimeArgs": [
+        "run",
+        "app/adc_app.py",
+        "--server.port",
+        "8510",
+        "--server.headless",
+        "true"
+      ],
       "port": 8510
+    },
+    {
+      "name": "adc-native",
+      "runtimeExecutable": ".venv/bin/streamlit",
+      "runtimeArgs": [
+        "run",
+        "app/native_app.py",
+        "--server.port",
+        "8511",
+        "--server.headless",
+        "true"
+      ],
+      "port": 8511
     }
   ]
 }

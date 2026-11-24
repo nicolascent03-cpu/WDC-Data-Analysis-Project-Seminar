@@ -1,0 +1,10 @@
+[client]
+# Hide Deploy / rerun / settings entries so the ADC site gets the whole window.
+toolbarMode = "minimal"
+
+[theme]
+# The site is dark only; match its background so the Streamlit frame disappears.
+base = "dark"
+backgroundColor = "#111110"
+paddingTop = "0.5rem"
+paddingBottom = "0.5rem"

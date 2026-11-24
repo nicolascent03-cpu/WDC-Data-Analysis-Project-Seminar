@@ -3,8 +3,27 @@
 toolbarMode = "minimal"
 
 [theme]
-# The site is dark only; match its background so the Streamlit frame disappears.
+# Dark only, same look as the HTML prototype: IBM Plex fonts, warm dark greys, orange accent.
 base = "dark"
+font = "'IBM Plex Sans':https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap"
+headingFont = "'IBM Plex Sans Condensed':https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@500;600;700&display=swap"
+codeFont = "'IBM Plex Mono':https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&display=swap"
+baseFontSize = 15
+headingFontWeights = [600, 600, 600, 600, 500, 500]
+primaryColor = "#e48461"
 backgroundColor = "#111110"
+secondaryBackgroundColor = "#1a1a19"
+textColor = "#f0efec"
+borderColor = "#2c2c2a"
+dataframeBorderColor = "#2c2c2a"
+showWidgetBorder = true
+showSidebarBorder = true
+baseRadius = "10px"
+buttonRadius = "8px"
+linkUnderline = false
+chartCategoricalColors = ["#3987e5", "#e66767", "#d55181", "#199e70", "#9085e9", "#c98500", "#d95926", "#8a857c"]
 paddingTop = "0.5rem"
 paddingBottom = "0.5rem"
+
+[theme.sidebar]
+backgroundColor = "#151514"

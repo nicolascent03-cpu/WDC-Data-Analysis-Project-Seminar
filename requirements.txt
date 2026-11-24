@@ -5,3 +5,7 @@ streamlit>=1.50
 jupyter
 nbstripout
 plotly
+statsmodels
+linearmodels
+lifelines
+scipy

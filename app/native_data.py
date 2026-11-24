@@ -134,6 +134,65 @@ def supplier_colour(name):
     return SUPPLIER_COLOURS.get(name, OTHER_COLOUR)
 
 
+def is_non_state(name):
+    """SIPRI suppliers that are not a state: "Other", "unknown supplier(s)", rebel groups (*) and organisations (**)."""
+    return name == "Other" or str(name).endswith("*") or str(name).lower().startswith("unknown")
+
+
+# ------------------------------------------------------------------ World map: arms build-up and country tint
+@st.cache_data
+def arms_rolling(window=10):
+    """Arms imports received in the `window` years up to each year, as a year x iso3 table on the full 1950-2025 grid
+    (years without a delivery count as 0), like BUB.roll in app/site/adc.html."""
+    p = load_panel()
+    a = p.pivot_table(index="year", columns="iso3", values="arms_imports_tiv", aggfunc="sum")
+    return a.reindex(range(1950, 2026)).fillna(0).rolling(window, min_periods=1).sum()
+
+
+@st.cache_data
+def arms_rolling_hosted(window=10):
+    """arms_rolling() with historical states added to today's country (East Germany to Germany), as drawn on the map."""
+    a = arms_rolling(window)
+    return a.T.groupby(lambda iso: HISTORICAL.get(iso, iso)).sum().T
+
+
+@st.cache_data
+def regime_grid():
+    """Regime type (0-3) per year x iso3; NaN where V-Dem has no data."""
+    return load_panel().pivot_table(index="year", columns="iso3", values="regime_type", aggfunc="first").reindex(range(1950, 2026))
+
+
+@st.cache_data
+def buildup_rows(window=10):
+    """World arms received in the `window` years to each year, split by the recipient's regime type in that year
+    (columns 0-3, and 4 = no regime data). A historical state that no longer exists takes the regime of today's
+    country, as buildRows() in app/site/adc.html."""
+    a, reg = arms_rolling(window), regime_grid()
+    out = pd.DataFrame(0.0, index=a.index, columns=range(5))
+    for iso in a.columns:
+        r = reg[iso] if iso in reg else pd.Series(np.nan, index=a.index)
+        host = HISTORICAL.get(iso)
+        if host and host in reg:
+            r = r.fillna(reg[host])
+        band = r.fillna(4).astype(int)
+        for k in range(5):
+            out[k] += a[iso].where(band == k, 0)
+    return out
+
+
+@st.cache_data
+def main_suppliers(y, years=5):
+    """{recipient iso3 (map country): main state supplier over the `years` years up to y}, the country tint of the
+    Arms flows map (FL.tints in app/site/flows.js)."""
+    f = load_flows()
+    w = f[(f["year"] > y - years) & (f["year"] <= y) & ~f["supplier"].map(is_non_state)].copy()
+    w["iso"] = w["recipient_iso3"].replace(HISTORICAL)
+    s = w.groupby(["iso", "supplier"])["tiv"].sum()
+    if s.empty:
+        return {}
+    return s.groupby(level=0).idxmax().map(lambda t: t[1]).to_dict()
+
+
 # ------------------------------------------------------------------ Countries & compare page
 DEMO = ROOT / "data" / "demo"
 COMPARE_COLOURS = ["#3987e5", "#e66767", "#199e70", "#c98500", "#9085e9", "#d95926", "#2bb5c0", "#e07ab0", "#a3b54a", "#b98a68"]

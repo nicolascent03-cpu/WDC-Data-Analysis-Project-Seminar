@@ -19,5 +19,6 @@ pages = st.navigation([
     st.Page("native_pages/findings.py", title="Findings", icon=":material/insights:"),
     st.Page("native_pages/compare.py", title="Countries & compare", icon=":material/compare_arrows:"),
     st.Page("native_pages/about.py", title="About the data", icon=":material/info:"),
+    st.Page("native_pages/glossary.py", title="Glossary & FAQ", icon=":material/menu_book:"),
 ], position="top")
 pages.run()

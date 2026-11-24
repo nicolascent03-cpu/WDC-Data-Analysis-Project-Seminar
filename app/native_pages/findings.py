@@ -111,7 +111,7 @@ def k_chart(pts, colour, what, yrange):
                      color=colour, thickness=2, width=6)))
     nr.layout(fig, 260, margin=dict(l=8, r=8, t=8, b=8))
     fig.update_xaxes(title="Years after onset (k)", dtick=1, range=[0.4, max(10, int(pts["k"].max())) + 0.6], showgrid=False)
-    fig.update_yaxes(tickformat="+.2f", range=yrange, zeroline=True, zerolinecolor=nr.INK2)
+    fig.update_yaxes(tickformat="+.2f", range=yrange, zeroline=True, zerolinecolor=nr.INK2, title="Change in democracy index")
     return fig
 
 

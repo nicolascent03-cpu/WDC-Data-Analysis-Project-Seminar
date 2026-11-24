@@ -134,6 +134,7 @@ details { margin-top: var(--sp-4); }
 summary { cursor: pointer; color: var(--ink2); font-size: 14px; min-height: 32px; display: list-item; border-radius: var(--r-sm); }
 summary:hover { color: var(--ink); }
 .tablebox { overflow: auto; max-height: 340px; border: 1px solid var(--line); border-radius: var(--r-md); margin-top: var(--sp-2); }
+.tablebox:has(> .empty) { border: 0; }
 table { border-collapse: collapse; width: 100%; font-size: 13px; }
 th, td { text-align: left; padding: 6px var(--sp-3); border-bottom: 1px solid var(--line); white-space: nowrap; }
 th { position: sticky; top: 0; background: var(--surface); font-weight: 600; }
@@ -406,6 +407,7 @@ select.btn { padding-right: 10px; }
 .sc-nt { fill: var(--muted); font: 11px var(--f-sans); }
 .sc-at { fill: var(--ink2); font: 12px var(--f-sans); }
 .sc-yr { fill: var(--line); font: 500 84px var(--f-mono); pointer-events: none; }
+.sc-yr.none { fill: var(--muted); font: 500 18px var(--f-sans); }
 .sc-b { transition: transform .6s ease-in-out, opacity .3s; cursor: pointer; }
 .sc-b.sc-gone { opacity: 0; pointer-events: none; }
 .sc-c { stroke: var(--surface); stroke-width: 1.5; }
@@ -640,6 +642,9 @@ svg, .flx-river, .flx-chord, .ov-river, .ov-side { -webkit-user-select: none; us
 .fd-head .hint { margin-top: var(--sp-1); }
 .fd-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-4); align-items: start; }
 .fd-grid > .fd-wide { grid-column: 1 / -1; }
+/* the supplier card stretches to the height of the forest card next to it; its chart fills the space (renderSup) */
+#fd-sup { align-self: stretch; display: flex; flex-direction: column; }
+#fd-sup > .fd-chart { flex: 1 1 auto; }
 .fd-card-h { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--sp-2) var(--sp-4); margin-bottom: var(--sp-1); }
 .fd-card-h h2 { font-size: 20px; display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-1) var(--sp-3); }
 .fd-card-h .pnl-r .btn { min-height: 32px; padding: 0 10px; font-size: 13px; }
@@ -2096,7 +2101,7 @@ svg, .flx-river, .flx-chord, .ov-river, .ov-side { -webkit-user-select: none; us
     if (!rgHas("suppliers") || !Object.keys(SUPD).length) { el.innerHTML = h + '<p class="fd-none">Not available yet: the supplier table of notebook 08 does not exist.</p>'; return; }
     h += '<div class="legend"><span><i class="sd-i" style="border-color: var(--ink)"></i>All recipients</span><span><i class="sd-i" style="border-color: var(--reg3)"></i>Democratic recipients</span><span><i class="sd-i" style="border-color: var(--reg0)"></i>Autocratic recipients</span></div><div class="fd-chart" id="fd-sup-chart"></div>';
     el.innerHTML = h;
-    const c = $("#fd-sup-chart"), W = c.clientWidth, H = 300, Lm = 40, Rm = 12, T = 22, B = 26, ser = supSeries();
+    const c = $("#fd-sup-chart"), W = c.clientWidth, H = Math.max(300, Math.floor(c.clientHeight)), Lm = 40, Rm = 12, T = 22, B = 26, ser = supSeries();
     const ya = ser[0].y, yb = ser[ser.length - 1].y, cw = (W - Lm - Rm) / (yb - ya + 1);
     const x = (yr) => Lm + (yr - ya + .5) * cw, y = (v) => T + (1 - v) * (H - T - B);
     let s = '<svg width="' + W + '" height="' + H + '" role="img" aria-label="Mean democracy of arms suppliers per year, 1950 to 2025">';
@@ -2203,6 +2208,9 @@ svg, .flx-river, .flx-chord, .ov-river, .ov-side { -webkit-user-select: none; us
   const bigCls = (id) => isBig(id) ? " big" : "";
   const REG_LEGEND = '<div class="legend">' + REG.map((r, i) => '<span><i style="background: var(--reg' + i + ')"></i>' + r + "</span>").join("") + "</div>";
 
+  // single-country charts with nothing to draw show a message instead of empty axes
+  const hasVdem = (iso) => { const c = C[iso]; for (let y = S.p0; y <= S.p1; y++) if (c.d[y - Y0] != null || c.r[y - Y0] != null) return true; return false; };
+  const noVdem = (iso) => '<div class="empty">No V-Dem data for ' + esc(C[iso].n) + " in " + S.p0 + "–" + S.p1 + ".</div>";
   function regimePanel(iso, g) {
     const big = isBig("rd"), bh = big ? 28 : 18, H = Math.round(122 * (big ? ZB : 1)), c = C[iso], sl = shortLab();
     let s = '<svg width="' + g.W + '" height="' + H + '" role="img" aria-label="Regime type and democracy index">' + gridLines(g, H);
@@ -2251,8 +2259,10 @@ svg, .flx-river, .flx-chord, .ov-river, .ov-side { -webkit-user-select: none; us
     list.forEach((c, i) => {
       const y = i * rh + 2;
       const types = [...new Set(c.p.map((p) => TYPE[p[3]]))].join(", ");
-      const name = (c.p.some((p) => p[3] === 2) ? "vs. " : "") + c.b.replace(/Government of /g, "");
-      s += '<text class="lab" x="8" y="' + (y + 17) + '"' + tipAttr([c.a + " vs. " + c.b, types, c.t ? "Territory: " + c.t : "Over government"]) + ">" + esc(trunc(name, nc)) + "</text>";
+      // interstate: name the other side (side B can be this country itself, e.g. Russia vs. Ukraine on Ukraine's page)
+      const sb = c.b.replace(/Government of /g, ""), sa = c.a.replace(/Government of /g, ""), inter = c.p.some((p) => p[3] === 2);
+      const name = inter ? "vs. " + (sb === C[iso].n ? sa : sb) : sb, cut = name.length > nc;
+      s += '<text class="lab" x="8" y="' + (y + 17) + '"' + tipAttr((cut ? [name] : []).concat([c.a + " vs. " + c.b, types, c.t ? "Territory: " + c.t : "Over government"])) + ">" + esc(trunc(name, nc)) + "</text>";
       let total = 0;
       c.p.forEach((p) => {
         total += p[1] - p[0] + 1;
@@ -2375,7 +2385,7 @@ svg, .flx-river, .flx-chord, .ov-river, .ov-side { -webkit-user-select: none; us
       : '<span class="small muted">One line per country · gaps: no imports</span>';
     const head = '<div class="pnl-h"><h3>Who supplied the arms <span>democracy of the suppliers, weighted by TIV</span>' + phBadge("suppliers") + '</h3><div class="pnl-r">' + (any ? legend + enlBtn("supd", "supplier democracy") : "") + "</div></div>";
     if (!has) return '<div class="pnl" data-pnl="supd">' + head + '<p class="fd-none">Not available yet: the supplier table of notebook 08 does not exist.</p></div>';
-    if (!any) return '<div class="pnl" data-pnl="supd">' + head + '<div class="empty">No arms imports with known suppliers in this period.</div></div>';
+    if (!any) return '<div class="pnl" data-pnl="supd">' + head + '<div class="empty">No arms deliveries in this period.</div></div>';
     return '<div class="pnl' + bigCls("supd") + '" data-pnl="supd">' + head + supDemLines(g, single) + axisSvg(g, false) + "</div>";
   }
 
@@ -2417,6 +2427,7 @@ svg, .flx-river, .flx-chord, .ov-river, .ov-side { -webkit-user-select: none; us
   const SC_GUIDE = "Up = more democratic, right = more arms received (10-year total, log scale). Moving together is not proof that one drives the other.";
   const RING_LEGEND = '<div class="legend"><span><i class="ring-i"></i>War year</span><span><i class="ring-i minor"></i>Minor conflict year</span><span><i class="ring-i wrap"></i>Years of war in a row</span><span><i class="ring-i wrap minor"></i>Minor conflict in a row</span></div>';
   function scPanel(single) {
+    if (single && !hasVdem(S.list[0])) return '<div class="pnl" data-pnl="sc"><div class="pnl-h"><h3>Democracy vs. arms imports <span>the path of ' + esc(C[S.list[0]].n) + " through time</span></h3></div>" + noVdem(S.list[0]) + "</div>";
     return '<div class="pnl' + bigCls("sc") + '" data-pnl="sc"><div class="pnl-h"><h3>Democracy vs. arms imports <span>' +
       (single ? "the path of " + esc(C[S.list[0]].n) + " through time" : "") +
       '</span></h3><div class="pnl-r">' + RING_LEGEND + (single ? "" : '<button class="btn btn-s box-tg" type="button" data-scfocus aria-pressed="' + !!S.scFocus + '" title="Show trails only for the country you hover or pin">Only highlighted</button>') + enlBtn("sc", "democracy vs. arms") + '</div></div><div data-sc="1"></div><p class="cv-guide">' + SC_GUIDE +
@@ -2497,7 +2508,6 @@ svg, .flx-river, .flx-chord, .ov-river, .ov-side { -webkit-user-select: none; us
   function scYear(el) {
     const m = el._sc; if (!m) return;
     const y = S.year, pts = [];
-    el.querySelector(".sc-yr").textContent = y;
     let tr = "";
     for (const { iso, k } of m.list) {
       const g = m.b[iso], d = val(iso, "d", y), a = arms10(iso, y);
@@ -2528,6 +2538,9 @@ svg, .flx-river, .flx-chord, .ov-river, .ov-side { -webkit-user-select: none; us
       tr += dots;
     }
     el.querySelector(".sc-tr").innerHTML = tr;
+    const yl = el.querySelector(".sc-yr"), none = !m.single && !pts.length;
+    yl.textContent = none ? y + ": no data for these countries" : y;
+    yl.classList.toggle("none", none);
     m.pts = pts;
     scLabels(el);
   }
@@ -2580,8 +2593,9 @@ svg, .flx-river, .flx-chord, .ov-river, .ov-side { -webkit-user-select: none; us
   function comboPanel(g, single) {
     const same = single ? "" : '<button class="btn btn-s" type="button" data-cvsame="1" aria-pressed="' + !!S.cvSame + '" title="Arms bars: one scale for all countries instead of one per row">Same arms scale for all</button>';
     const legend = '<div class="legend"><span><i class="cv-i-line"></i>Democracy index (0–1)</span><span><i class="cv-i-war"></i>War year</span><span><i class="cv-i-minor"></i>Minor conflict</span><span><i class="cv-i-arm"></i>Arms imports</span></div>';
+    const none = single && !hasVdem(S.list[0]);
     return '<div class="pnl' + bigCls("cv") + '" data-pnl="cv"><div class="pnl-h"><h3>Democracy, conflict and arms on one axis <span>' + "" +
-      '</span></h3><div class="pnl-r">' + legend + same + enlBtn("cv", "combined timeline") + "</div></div>" + comboRows(g, single) + axisSvg(g, false) + "</div>";
+      '</span></h3><div class="pnl-r">' + (none ? "" : legend + same + enlBtn("cv", "combined timeline")) + "</div></div>" + (none ? noVdem(S.list[0]) : comboRows(g, single) + axisSvg(g, false)) + "</div>";
   }
   function comboRows(g, single) {
     const big = isBig("cv"), n = S.list.length;
@@ -2784,7 +2798,7 @@ svg, .flx-river, .flx-chord, .ov-river, .ov-side { -webkit-user-select: none; us
       '<div class="flx"><div class="flx-map flx-cmap"><svg viewBox="0 0 ' + M.w + " " + M.h + '" role="img" aria-label="World map of arms deliveries to or from these countries">' +
       '<g class="flx-shapes">' + shapes + '</g><g class="flx-mapg"></g></svg><p class="flx-badge"></p></div>' +
       '<div class="flx-chord"><svg data-px role="img" aria-label="Chord ring: suppliers (left) and recipients (right) of these deliveries"></svg></div>' +
-      '<div class="flx-river"><svg aria-label="River of time: yearly arms deliveries of these countries by supplier, 1950 to 2025. Arrow keys change the year."></svg></div></div>' +
+      '<div class="flx-river"><svg data-h="110" aria-label="River of time: yearly arms deliveries of these countries by supplier, 1950 to 2025. Arrow keys change the year."></svg></div></div>' +
       '<div class="flx-foot"></div></div>';
   }
   function mountCmpFlows() {
@@ -2854,8 +2868,9 @@ svg, .flx-river, .flx-chord, .ov-river, .ov-side { -webkit-user-select: none; us
   function drawTimelines() {
     document.querySelectorAll("[data-tl]").forEach((el) => {
       const iso = el.dataset.tl, g = geom(el.clientWidth);
+      const hv = hasVdem(iso);
       el.innerHTML = comboPanel(g, true) + scPanel(true) +
-        '<div class="pnl' + bigCls("rd") + '" data-pnl="rd"><div class="pnl-h"><h3>Regime and democracy index <span>V-Dem</span></h3><div class="pnl-r">' + REG_LEGEND + enlBtn("rd", "regime and democracy index") + "</div></div>" + regimePanel(iso, g) + axisSvg(g, false) + "</div>" +
+        '<div class="pnl' + bigCls("rd") + '" data-pnl="rd"><div class="pnl-h"><h3>Regime and democracy index <span>V-Dem</span></h3><div class="pnl-r">' + (hv ? REG_LEGEND + enlBtn("rd", "regime and democracy index") : "") + "</div></div>" + (hv ? regimePanel(iso, g) + axisSvg(g, false) : noVdem(iso)) + "</div>" +
         '<div class="pnl' + (S.allConf ? " rows-all" : "") + '">' + conflictPanel(iso, g) + "</div>" +
         '<div class="pnl' + bigCls("arms-" + iso) + '" data-pnl="arms-' + iso + '">' + armsPanel(iso, g) + "</div>" + supDemPanel(g, true) +
         '<div class="pnl' + (S.allSup ? " rows-all" : "") + '">' + supplierPanel(iso, g) + axisSvg(g, false) + "</div>";
@@ -2878,13 +2893,14 @@ svg, .flx-river, .flx-chord, .ov-river, .ov-side { -webkit-user-select: none; us
     applyHl();
   }
   function tableFor(iso) {
-    let t = '<table><thead><tr><th class="n">Year</th><th>Regime</th><th class="n">Index</th><th>Conflict</th><th class="n">Imports (TIV)</th></tr></thead><tbody>';
-    for (let y = Y1; y >= Y0; y--) {
+    let t = '<table><thead><tr><th class="n">Year</th><th>Regime</th><th class="n">Index</th><th>Conflict</th><th class="n">Imports (TIV)</th></tr></thead><tbody>', rows = 0;
+    for (let y = S.p1; y >= S.p0; y--) {
       const r = val(iso, "r", y); if (r == null) continue;
+      rows++;
       const c = val(iso, "c", y);
       t += '<tr><td class="n">' + y + "</td><td>" + REG[r] + '</td><td class="n">' + val(iso, "d", y).toFixed(2) + "</td><td>" + (c === 2 ? "War" : c === 1 ? "Minor" : "–") + '</td><td class="n">' + fmt(val(iso, "a", y), 1) + "</td></tr>";
     }
-    return t + "</tbody></table>";
+    return rows ? t + "</tbody></table>" : '<div class="empty">No data in this period</div>';
   }
   function setYear(y) {
     S.year = y; $("#ct-year").value = y; $("#ct-year-o").textContent = y;

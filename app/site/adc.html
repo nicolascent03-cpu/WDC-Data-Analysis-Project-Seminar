@@ -418,9 +418,24 @@ select.btn { padding-right: 10px; }
 .sc-l.show { opacity: 1; }
 .sc-tr line { stroke-width: 2.2; stroke-linecap: round; }
 /* "Only highlighted": no trails unless a country is hovered or pinned; then only that country is shown in full */
-.sc-focus .sc-tr [data-ck]:not(.ck-on) { display: none; }
-.sc-focus.sc-hl .sc-b:not(.ck-on) { opacity: .14; }
-.sc-focus.sc-hl .sc-b:not(.ck-on) .sc-l { display: none; }
+.sc-focus .sc-tr [data-ck]:not(.ck-on):not([data-chk]) { display: none; }
+.sc-focus.sc-hl .sc-b:not(.ck-on):not([data-chk]):not(.sc-gone) { opacity: .14; }
+.sc-focus.sc-hl .sc-b:not(.ck-on):not([data-chk]) .sc-l { display: none; }
+/* ticked countries (S.scSel): only they are shown in full; a hovered or pinned country still lights up on top */
+.sc-sel .sc-b:not([data-chk]):not(.ck-on):not(.sc-gone) { opacity: .1; }
+.sc-sel .sc-b:not([data-chk]):not(.ck-on) .sc-l { display: none; }
+.sc-sel .sc-tr [data-ck]:not([data-chk]):not(.ck-on) { display: none; }
+.sc-note-clear { background: none; border: 0; padding: 0; font: inherit; color: var(--accent); text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+/* tick boxes at the right end of the "on one axis" rows */
+.cv-box { position: relative; }
+.cv-ckh { display: flex; justify-content: flex-end; align-items: center; gap: var(--sp-2); margin: 0 0 var(--sp-1); font-size: 12px; color: var(--muted); }
+.cv-ckh button { background: none; border: 0; padding: 2px 4px; font: inherit; color: var(--ink2); text-decoration: underline; text-underline-offset: 2px; cursor: pointer; border-radius: var(--r-sm); }
+.cv-ckh button:hover { color: var(--ink); }
+.cv-ck { position: absolute; width: 18px; height: 18px; padding: 0; border: 1.5px solid var(--muted); border-radius: 3px; background: var(--surface); cursor: pointer; }
+.cv-ck::after { content: ""; position: absolute; inset: -7px; }
+.cv-ck:hover { border-color: var(--ink); }
+.cv-ck[aria-checked="true"] { background: var(--accent); border-color: var(--accent); box-shadow: inset 0 0 0 3px var(--surface); }
+.cv-ck:focus-visible, .cv-ckh button:focus-visible, .sc-note-clear:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 /* path preview from the combined rows */
 .sc-pv { pointer-events: none; }
 .sc-pv-path { fill: none; stroke-width: 2.4; stroke-linejoin: round; }
@@ -483,6 +498,31 @@ tr.ck-dim, .cblock.ck-dim, .chip.ck-dim, .lgk-w.ck-dim { opacity: .4; }
 .flx-on .flx-map { grid-area: map; }
 .flx-chord { grid-area: chord; min-width: 0; }
 .flx-river { grid-area: river; min-width: 0; }
+/* country card: replaces the chord ring (same box, absolutely placed) while a country is hovered on the map */
+.flx-chord { position: relative; }
+.flx-chord.carding > svg { visibility: hidden; }
+.flx-card { position: absolute; inset: 0; overflow: hidden; display: flex; flex-direction: column; gap: var(--sp-3); padding: var(--sp-1) var(--sp-1) 0; font-size: 12px; color: var(--ink2); pointer-events: none; }
+.flx-card[hidden] { display: none; }
+.fc-h h4 { margin: 0; font: 600 18px/1.2 var(--f-cond); color: var(--ink); }
+.fc-h h4 span { font: 500 14px var(--f-mono); color: var(--muted); margin-left: var(--sp-1); }
+.fc-h p { margin: 2px 0 0; color: var(--muted); }
+.fc-sh { display: flex; justify-content: space-between; align-items: baseline; padding-bottom: 3px; margin-bottom: var(--sp-1); border-bottom: 1px solid var(--line); }
+.fc-sh span { font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.fc-sh b { font-weight: 500; color: var(--ink); }
+.fc-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; }
+.fc-cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--sp-4); align-items: start; }
+.fc-list li { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(20px, 1fr) minmax(3.2em, auto); gap: 6px; align-items: center; line-height: 15px; }
+.fc-n { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: var(--ink2); }
+.fc-bar { height: 8px; border-radius: 2px; background: color-mix(in srgb, var(--line) 60%, transparent); overflow: hidden; }
+.fc-bar i { display: block; height: 100%; border-radius: 2px; }
+.fc-v { text-align: right; color: var(--ink); font-size: 11.5px; }
+.fc-none, .fc-empty { margin: 0; color: var(--muted); }
+.fc-empty { font-size: 13px; }
+.fc-foot { margin: auto 0 0; display: grid; gap: 2px; padding-top: var(--sp-2); border-top: 1px solid var(--line); }
+.fc-foot div { display: flex; justify-content: space-between; gap: var(--sp-2); }
+.fc-foot dt { color: var(--muted); }
+.fc-foot dd { margin: 0; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fc-foot dd i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 5px; vertical-align: 0; }
 .flx-chord svg, .flx-river svg, .flx-cmap svg { width: 100%; height: auto; display: block; overflow: visible; }
 @media (max-width: 1099.98px) {
   .flx-on .flx { grid-template-columns: minmax(0, 1fr); grid-template-areas: "map" "river" "chord"; }
@@ -1339,8 +1379,7 @@ svg, .flx-river, .flx-chord, .ov-river, .ov-side { -webkit-user-select: none; us
       if (sh) tip = sh.getAttribute("data-tip");
       else if (mode === "build") tip = buildTip(iso, y).join("|");
       else if (mode === "flow" && FL) {
-        const f = FL.country(y, iso);
-        tip = [C[iso].n + " · " + y, "Arms imports: " + fmt(val(iso, "a", y) || f.imp) + " TIV", "Arms exports: " + fmt(f.exp) + " TIV"].concat(T[iso] ? ["Main supplier, last 5 years: " + T[iso]] : []).concat(["Click to open timeline"]).join("|");
+        tip = flowTip(iso, y, true).join("|");
       } else tip = regTip(iso, y).join("|");
       if (tip) h.setAttribute("data-tip", tip); else h.removeAttribute("data-tip");
     });
@@ -1348,6 +1387,36 @@ svg, .flx-river, .flx-chord, .ov-river, .ov-side { -webkit-user-select: none; us
       const iso = d.dataset.iso, r = val(iso, "r", y);
       d.style.fill = mode === "build" ? "var(--nodata)" : mode === "flow" ? (T && T[iso] ? "color-mix(in srgb, " + FL.color(T[iso]) + " 60%, var(--nodata))" : "var(--s-x2)") : r == null ? "var(--nodata)" : "var(--reg" + r + ")";
     });
+  }
+
+  // arms-flows tooltip of one country: imports with the top 3 suppliers, exports with the top 3 recipients
+  function flowTip(iso, y, clickable) {
+    const f = FL.countryDetail(y, iso, 3), n = C[iso] ? C[iso].n : FL.rName(iso);
+    const top3 = (p) => p.top.map((x) => trunc(x.name, 18) + " " + fmt(x.v)).join(", ") + (p.other > 0 ? ", other " + fmt(p.other) : "");
+    const out = [n + " · " + y];
+    if (!f.imp.total && !f.exp.total) out.push("No major arms deliveries in " + y);
+    else {
+      out.push("Imports: " + fmt(f.imp.total) + " TIV" + (f.imp.total ? " (" + top3(f.imp) + ")" : ""));
+      out.push("Exports: " + fmt(f.exp.total) + " TIV" + (f.exp.total ? " (" + top3(f.exp) + ")" : ""));
+    }
+    if (clickable && C[iso]) out.push("Click to open timeline");
+    return out;
+  }
+  // country card in the chord area while a country is hovered on the map (flows mode, overview and compare page)
+  function flowCard(iso, y) {
+    const f = FL.countryDetail(y, iso, 5), n = C[iso] ? C[iso].n : FL.rName(iso), r = C[iso] ? val(iso, "r", y) : null;
+    const bars = (p, kind) => {
+      if (!p.total) return '<p class="fc-none">No ' + kind + " in " + y + "</p>";
+      const row = (name, v, col) => '<li><span class="fc-n">' + esc(trunc(name, 22)) + '</span><span class="fc-bar"><i style="width: ' + Math.max(2, v / p.total * 100).toFixed(1) + "%; background: " + col + '"></i></span><span class="fc-v num">' + fmt(v) + "</span></li>";
+      return '<ul class="fc-list">' + p.top.map((x) => row(x.name, x.v, x.color)).join("") + (p.other > 0 ? row("other (" + (p.n - p.top.length) + ")", p.other, "var(--s-oth)") : "") + "</ul>";
+    };
+    const sec = (lab, p, kind) => '<div class="fc-sec"><div class="fc-sh"><span>' + lab + '</span><b class="num">' + fmt(p.total) + " TIV</b></div>" + bars(p, kind) + "</div>";
+    let h = '<div class="fc-h"><h4>' + esc(n) + ' <span class="num">' + y + '</span></h4><p>' + (r != null ? esc(REG[r]) : "No V-Dem regime data") + "</p></div>";
+    if (!f.imp.total && !f.exp.total) h += '<p class="fc-empty">No major arms deliveries in ' + y + ".</p>";
+    else h += '<div class="fc-cols">' + sec("Imports", f.imp, "imports") + sec("Exports", f.exp, "exports") + "</div>";
+    h += '<dl class="fc-foot">' + (f.main ? "<div><dt>Main supplier " + (y - 4) + "–" + y + '</dt><dd><i style="background: ' + f.mainColor + '"></i>' + esc(f.main) + "</dd></div>" : "") +
+      "<div><dt>Share of world imports " + y + '</dt><dd class="num">' + FL.pct(f.worldShare) + "</dd></div></dl>";
+    return h;
   }
 
   // ---------- arms flows: three linked views (map ribbons, chord ring, river of time).
@@ -1382,7 +1451,7 @@ svg, .flx-river, .flx-chord, .ov-river, .ov-side { -webkit-user-select: none; us
   //     dirToggle, caption, clickable (country click opens its timeline), selSet (countries outlined on the map)}
   function flxPanel(root, o) {
     const q = (s) => root.querySelector(s), sc = o.scope;
-    const st = { year: o.getYear(), hover: null, lock: null, n: 25, share: false, dir: "imp", tint: true, inView: true, lastIn: 0, scrubT: 0 };
+    const st = { year: o.getYear(), card: null, hover: null, lock: null, n: 25, share: false, dir: "imp", tint: true, inView: true, lastIn: 0, scrubT: 0 };
     flxMode = flxMode || flxLayout();
     const hov = (sel) => { st.hover = sel; apply(); };
     const pick = (sel) => { st.lock = sel && !(st.lock && st.lock.key === sel.key) ? sel : null; apply(); };
@@ -1391,6 +1460,16 @@ svg, .flx-river, .flx-chord, .ov-river, .ov-side { -webkit-user-select: none; us
     const chord = FL.chordView(q(".flx-chord svg"), sc, { mode: flxMode, onHover: hov, onPick: pick });
     const river = FL.riverView(q(".flx-river svg"), sc, { mode: flxMode, dir: st.dir, onHover: hov, onPick: pick,
       onYear: (y, scrubbing) => { if (scrubbing) c.scrub(); o.setYear(y); } });
+    // country card over the chord ring while the pointer is on a country (shape, hit circle or dot)
+    const chWrap = q(".flx-chord"), card = document.createElement("div");
+    card.className = "flx-card"; card.hidden = true; card.setAttribute("aria-live", "polite");
+    chWrap.appendChild(card);
+    function cardTo(iso) {
+      if (iso === st.card) return;
+      st.card = iso;
+      if (iso) card.innerHTML = flowCard(iso, st.year);
+      card.hidden = !iso; chWrap.classList.toggle("carding", !!iso);
+    }
     const btn = (k, label, on) => '<button class="btn" type="button" data-flx="' + k + '" aria-pressed="' + !!on + '">' + label + "</button>";
     function tools() {
       o.tools.innerHTML =
@@ -1436,8 +1515,9 @@ svg, .flx-river, .flx-chord, .ov-river, .ov-side { -webkit-user-select: none; us
         const other = f.as.filter((s) => s !== n);
         p.setAttribute("class", o.selSet && o.selSet.has(iso) ? "fn fsel" : "fn");
         p.style.fill = st.tint && main ? "color-mix(in srgb, " + FL.color(main) + " 32%, var(--nodata))" : "";
-        p.setAttribute("data-tip", [n + " · " + y, "Arms imports: " + fmt(f.imp) + " TIV", "Arms exports: " + fmt(f.exp) + " TIV" + (other.length ? " (as " + other.join(", ") + ")" : "")]
-          .concat(main ? ["Main supplier, last 5 years: " + main] : []).concat(o.clickable && C[iso] ? ["Click to open timeline"] : []).join("|"));
+        const tl = flowTip(iso, y, o.clickable);
+        if (other.length && tl.length > 2 && /^Exports/.test(tl[2])) tl[2] += " · as " + other.join(", ");
+        p.setAttribute("data-tip", tl.join("|"));
       });
     }
     root.addEventListener("click", (e) => {
@@ -1457,7 +1537,28 @@ svg, .flx-river, .flx-chord, .ov-river, .ov-side { -webkit-user-select: none; us
     o.legend.addEventListener("pointerover", (e) => { const lg = e.target.closest("[data-lg]"); if (lg && c.visible()) hov(LG[+lg.dataset.lg].sel); });
     o.legend.addEventListener("pointerout", (e) => { if (e.target.closest("[data-lg]") && c.visible()) hov(null); });
     o.shapes.addEventListener("pointerover", (e) => { const p = e.target.closest("path[data-iso]"); if (p && c.visible()) hov(FL.selIso(p.dataset.iso)); });
-    o.mapSvg.addEventListener("pointerleave", () => { if (c.visible()) hov(null); });
+    // the card follows real pointer events only (the compare page sends synthetic ones to highlight a country)
+    // The country under the pointer is looked up below the arcs too, so a country covered by ribbons still gets its card.
+    const isCountry = (p) => p && (o.shapes.contains(p) || (o.dots && o.dots.contains(p)));
+    function isoAt(x, y) {
+      for (const el of document.elementsFromPoint(x, y)) {
+        if (!o.mapSvg.contains(el)) break; // an overlay (zoom buttons, badge) or outside the map
+        const p = el.closest && el.closest("[data-iso]");
+        if (isCountry(p)) return p.dataset.iso;
+      }
+      return null;
+    }
+    o.mapSvg.addEventListener("pointermove", (e) => {
+      if (!e.isTrusted || !c.visible()) return;
+      const p = e.target.closest && e.target.closest("[data-iso]");
+      cardTo(isCountry(p) ? p.dataset.iso : isoAt(e.clientX, e.clientY)); // a shape or dot directly, else look below
+    });
+    o.mapSvg.addEventListener("pointerover", (e) => {
+      if (!e.isTrusted || !c.visible()) return;
+      const p = e.target.closest && e.target.closest("[data-iso]");
+      if (p && o.dots && o.dots.contains(p)) hov(FL.selIso(p.dataset.iso)); // dots of small states highlight like shapes
+    });
+    o.mapSvg.addEventListener("pointerleave", () => { cardTo(null); if (c.visible()) hov(null); });
     o.mapSvg.addEventListener("click", (e) => { if (c.visible() && !e.target.closest("path")) pick(null); });
     const io = "IntersectionObserver" in window ? new IntersectionObserver((es) => { st.inView = es[es.length - 1].isIntersecting; flxKick(); }) : null;
     if (io) io.observe(root);
@@ -1473,6 +1574,7 @@ svg, .flx-river, .flx-chord, .ov-river, .ov-side { -webkit-user-select: none; us
         chord.year(y, inst); river.year(y);
         o.badge.textContent = !b.count ? "No deliveries in " + y : "Top " + b.shown + " of " + fmt(b.count) + " deliveries shown (" + Math.round(b.share * 100) + "% of this year's TIV)";
         paintShapes(y); table();
+        if (st.card) card.innerHTML = flowCard(st.card, y);
         flxKick();
       },
       scrub() {
@@ -1496,7 +1598,7 @@ svg, .flx-river, .flx-chord, .ov-river, .ov-side { -webkit-user-select: none; us
   const FLOW_NOTE = "Line width = TIV delivered; country tint = main supplier over the last 5 years. " + FLX_TIV;
   function ovFlows() {
     if (!OVF && FL) OVF = flxPanel($(".mapbox"), {
-      scope: FL.scope(null), mapG: $("#map-flows"), mapSvg: $("#map svg"), shapes: $("#map-shapes"),
+      scope: FL.scope(null), mapG: $("#map-flows"), mapSvg: $("#map svg"), shapes: $("#map-shapes"), dots: $("#map-dots"),
       legend: $("#map-legend"), tools: $("#map-tools"), foot: $(".mapbox .flx-foot"), badge: $("#map-badge"),
       visible: () => S.view === "overview" && S.mapMode === "flow",
       getYear: () => S.mapYear, setYear: (y) => { S.mapYear = y; updateMap(); },
@@ -2429,9 +2531,22 @@ svg, .flx-river, .flx-chord, .ov-river, .ov-side { -webkit-user-select: none; us
   function scPanel(single) {
     if (single && !hasVdem(S.list[0])) return '<div class="pnl" data-pnl="sc"><div class="pnl-h"><h3>Democracy vs. arms imports <span>the path of ' + esc(C[S.list[0]].n) + " through time</span></h3></div>" + noVdem(S.list[0]) + "</div>";
     return '<div class="pnl' + bigCls("sc") + '" data-pnl="sc"><div class="pnl-h"><h3>Democracy vs. arms imports <span>' +
-      (single ? "the path of " + esc(C[S.list[0]].n) + " through time" : "") +
-      '</span></h3><div class="pnl-r">' + RING_LEGEND + (single ? "" : '<button class="btn btn-s box-tg" type="button" data-scfocus aria-pressed="' + !!S.scFocus + '" title="Show trails only for the country you hover or pin">Only highlighted</button>') + enlBtn("sc", "democracy vs. arms") + '</div></div><div data-sc="1"></div><p class="cv-guide">' + SC_GUIDE +
+      (single ? "the path of " + esc(C[S.list[0]].n) + " through time" : '<span data-scnote="1">' + scNote() + "</span>") +
+      '</span></h3><div class="pnl-r">' + RING_LEGEND + (single ? "" : '<button class="btn btn-s box-tg" type="button" data-scfocus aria-pressed="' + !!S.scFocus + '" title="Show trails only for the ticked countries and the one you hover or pin">Only checked or highlighted</button>') + enlBtn("sc", "democracy vs. arms") + '</div></div><div data-sc="1"></div><p class="cv-guide">' + SC_GUIDE +
       (single ? " Thin line: the whole period; strong part: the last 10 years." : " Trails: the previous 10 years.") + "</p></div>";
+  }
+  // ticked countries: the line in the scatter header, and applying a change everywhere without a re-render
+  function scNote() {
+    const n = S.scSel.size;
+    return n ? "Showing " + n + " checked " + (n === 1 ? "country" : "countries") + ' · <button type="button" class="sc-note-clear" data-scall="0">clear</button>'
+      : "Tick countries in the rows below to follow them";
+  }
+  function scSelSet(list) {
+    S.scSel = new Set(list.filter((i) => S.list.includes(i)));
+    document.querySelectorAll("#cols [data-scsel]").forEach((b) => b.setAttribute("aria-checked", S.scSel.has(b.dataset.scsel)));
+    document.querySelectorAll("#cols [data-scnote]").forEach((x) => { x.innerHTML = scNote(); });
+    document.querySelectorAll("[data-sc]").forEach(scYear);
+    applyHl();
   }
   // builds the static frame (axes, bubbles) and keeps the scales on el._sc; scYear() moves the bubbles
   function drawScatter(el, W) {
@@ -2507,12 +2622,15 @@ svg, .flx-river, .flx-chord, .ov-river, .ov-side { -webkit-user-select: none; us
   }
   function scYear(el) {
     const m = el._sc; if (!m) return;
-    const y = S.year, pts = [];
+    const y = S.year, pts = [], sel = !m.single && S.scSel.size ? S.scSel : null;
+    el.classList.toggle("sc-sel", !!sel);
     let tr = "";
     for (const { iso, k } of m.list) {
       const g = m.b[iso], d = val(iso, "d", y), a = arms10(iso, y);
       if ((!m.single && S.off.has(iso)) || d == null || a == null) { g.classList.add("sc-gone"); continue; }
       g.classList.remove("sc-gone");
+      const chk = !!sel && sel.has(iso);
+      g.toggleAttribute("data-chk", chk);
       const X = m.sx(a, k), Y = m.sy(d), c = val(iso, "c", y), r = val(iso, "r", y);
       g.style.transform = "translate(" + X.toFixed(1) + "px, " + Y.toFixed(1) + "px)";
       g.querySelector(".sc-ring").setAttribute("class", "sc-ring" + (c === 2 ? " war" : c === 1 ? " minor" : ""));
@@ -2523,7 +2641,7 @@ svg, .flx-river, .flx-chord, .ov-river, .ov-side { -webkit-user-select: none; us
         c === 2 ? "War this year" : c === 1 ? "Minor conflict this year" : "No armed conflict this year"].concat(m.single ? [] : ["Click to pin (highlight in every chart)"]).join("|"));
       pts.push({ iso, a, X, Y, left });
       // trail of the previous 10 years: gentle fade, a dot per year, conflict years ringed and runs of conflict wrapped
-      const ck = m.single ? "" : ' data-ck="' + iso + '"';
+      const ck = m.single ? "" : ' data-ck="' + iso + '"' + (chk ? ' data-chk="1"' : "");
       if (!m.single) tr += '<g' + ck + ">" + scWraps(iso, k, y - 10, y, m.sx, m.sy) + "</g>";
       let prev = null, dots = "";
       for (let yy = y - 10; yy <= y; yy++) {
@@ -2547,8 +2665,9 @@ svg, .flx-river, .flx-chord, .ov-river, .ov-side { -webkit-user-select: none; us
   // labels: everyone up to 12 countries, otherwise the highlighted one plus the 11 biggest importers
   function scLabels(el) {
     const m = el._sc; if (!m) return;
-    const h = hlIso(), show = new Set();
-    if (m.pts.length <= 12) m.pts.forEach((p) => show.add(p.iso));
+    const h = hlIso(), show = new Set(), sel = !m.single && S.scSel.size ? S.scSel : null;
+    if (sel) m.pts.forEach((p) => { if (sel.has(p.iso) || p.iso === h) show.add(p.iso); });
+    else if (m.pts.length <= 12) m.pts.forEach((p) => show.add(p.iso));
     else { if (h) show.add(h); m.pts.slice().sort((a, b) => b.a - a.a).forEach((p) => { if (show.size < 12) show.add(p.iso); }); }
     // place labels greedily (highlighted first, then the biggest importers) and skip any that would overlap
     const placed = [], ok = new Set(), byIso = {};
@@ -2557,7 +2676,7 @@ svg, .flx-river, .flx-chord, .ov-river, .ov-side { -webkit-user-select: none; us
     for (const iso of order) {
       const p = byIso[iso]; if (!p) continue;
       const w = Math.min(22, C[iso].n.length) * 7 + 4, x0 = p.left ? p.X - m.r - 5 - w : p.X + m.r + 5, y0 = p.Y - 9, box = [x0, y0, x0 + w, y0 + 14];
-      const hit = iso !== h && placed.some((q) => !(box[2] < q[0] || box[0] > q[2] || box[3] < q[1] || box[1] > q[3]));
+      const hit = iso !== h && !(sel && sel.has(iso)) && placed.some((q) => !(box[2] < q[0] || box[0] > q[2] || box[3] < q[1] || box[1] > q[3]));
       if (!hit) { placed.push(box); ok.add(iso); }
     }
     for (const iso in m.b) m.b[iso].querySelector(".sc-l").classList.toggle("show", ok.has(iso));
@@ -2594,11 +2713,12 @@ svg, .flx-river, .flx-chord, .ov-river, .ov-side { -webkit-user-select: none; us
     const same = single ? "" : '<button class="btn btn-s" type="button" data-cvsame="1" aria-pressed="' + !!S.cvSame + '" title="Arms bars: one scale for all countries instead of one per row">Same arms scale for all</button>';
     const legend = '<div class="legend"><span><i class="cv-i-line"></i>Democracy index (0–1)</span><span><i class="cv-i-war"></i>War year</span><span><i class="cv-i-minor"></i>Minor conflict</span><span><i class="cv-i-arm"></i>Arms imports</span></div>';
     const none = single && !hasVdem(S.list[0]);
-    return '<div class="pnl' + bigCls("cv") + '" data-pnl="cv"><div class="pnl-h"><h3>Democracy, conflict and arms on one axis <span>' + "" +
+    return '<div class="pnl' + bigCls("cv") + '" data-pnl="cv"><div class="pnl-h"><h3>Democracy, conflict and arms on one axis <span>' + (single ? "" : "Tick countries to follow them in the scatter above") +
       '</span></h3><div class="pnl-r">' + (none ? "" : legend + same + enlBtn("cv", "combined timeline")) + "</div></div>" + (none ? noVdem(S.list[0]) : comboRows(g, single) + axisSvg(g, false)) + "</div>";
   }
   function comboRows(g, single) {
     const big = isBig("cv"), n = S.list.length;
+    let cks = "";
     const rh = single ? (big ? 240 : 130) : Math.round((n <= 8 ? 56 : n <= 14 ? 46 : 38) * (big ? 1.7 : 1)), H = n * rh + 2;
     const mxs = {}; let mxAll = 0;
     S.list.forEach((iso) => { let m = 0; for (let y = S.p0; y <= S.p1; y++) m = Math.max(m, val(iso, "a", y) || 0); mxs[iso] = m; mxAll = Math.max(mxAll, m); });
@@ -2644,8 +2764,11 @@ svg, .flx-river, .flx-chord, .ov-river, .ov-side { -webkit-user-select: none; us
       }
       if (single) s += '<text class="cv-max" x="' + (g.W - R + 6) + '" y="' + (bot - barH + 8) + '">' + (mx > 0 ? "max " + tickLab(Math.round(mx)) : "") + "</text>";
       s += '<rect class="cv-hit" data-cvrow="' + iso + '" x="' + L + '" y="' + y0 + '" width="' + (g.W - L - R).toFixed(1) + '" height="' + (rh - 1) + '"></rect></g>';
+      if (!single) cks += '<button type="button" class="cv-ck" role="checkbox" data-scsel="' + iso + '" data-ckh="' + iso + '" aria-checked="' + S.scSel.has(iso) + '" aria-label="Follow ' + esc(c.n) + ' in the scatter" style="left: ' + Math.round(g.W - R + (R - 18) / 2) + "px; top: " + Math.round(y0 + (rh - 18) / 2) + 'px"></button>';
     });
-    return s + yearLine(g, H) + "</svg>";
+    s += yearLine(g, H) + "</svg>";
+    if (single) return s;
+    return '<div class="cv-ckh" role="group" aria-label="Countries followed in the scatter"><span>Follow in scatter:</span><button type="button" data-scall="1">Select all</button><button type="button" data-scall="0">Clear</button></div><div class="cv-box">' + s + cks + "</div>";
   }
   // hover / click on a combined-timeline row: work out the year from the pointer, fill the tooltip
   function cvYearAt(hit, clientX) {
@@ -2665,7 +2788,7 @@ svg, .flx-river, .flx-chord, .ov-river, .ov-side { -webkit-user-select: none; us
 
   // (c) cross-highlighting: S.hover (pointer) or S.pin (clicked chip or legend name) highlights one country in all
   // compare charts. Sources carry data-ckh="ISO", everything that dims or lights up carries data-ck="ISO".
-  S.hover = null; S.pin = null; S.allConf = false; S.allSup = false; S.cvSame = false; S.scFocus = true;
+  S.scSel = new Set(); S.scSelKey = ""; S.hover = null; S.pin = null; S.allConf = false; S.allSup = false; S.cvSame = false; S.scFocus = true;
   let hlLast = null;
   const hlIso = () => S.list.length > 1 ? (S.hover || S.pin) : null;
   function applyHl() {
@@ -2834,6 +2957,7 @@ svg, .flx-river, .flx-chord, .ov-river, .ov-side { -webkit-user-select: none; us
   function renderCountry() {
     const cols = $("#cols"), list = S.list;
     S.off = new Set([...S.off].filter((i) => list.includes(i)));
+    if (list.join(",") !== S.scSelKey) { S.scSelKey = list.join(","); S.scSel = new Set(); } // new country list: clear the ticks
     if (!list.includes(S.pin)) S.pin = null;
     S.hover = null;
     $("#chips").innerHTML = chipsHtml();
@@ -2970,6 +3094,10 @@ svg, .flx-river, .flx-chord, .ov-river, .ov-side { -webkit-user-select: none; us
   $("#ct-year").addEventListener("input", (e) => { if (CMPF) CMPF.scrub(); setYear(+e.target.value); });
   document.querySelectorAll("[data-period]").forEach((b) => b.addEventListener("click", () => { const [a, z] = b.dataset.period.split("-").map(Number); S.p0 = a; S.p1 = z; renderCountry(); }));
   $("#cols").addEventListener("click", (e) => {
+    const sk = e.target.closest("[data-scsel]");
+    if (sk) { const iso = sk.dataset.scsel, l = [...S.scSel]; scSelSet(S.scSel.has(iso) ? l.filter((i) => i !== iso) : l.concat(iso)); return; }
+    const sa = e.target.closest("[data-scall]");
+    if (sa) { scSelSet(sa.dataset.scall === "1" ? S.list.slice() : []); return; }
     const en = e.target.closest("[data-enl]");
     if (en) { setBig(en.dataset.enl, !isBig(en.dataset.enl)); return; }
     const pin = e.target.closest("[data-pin]");

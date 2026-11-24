@@ -294,6 +294,18 @@
       for (const iso in sum) { const b = top(sum[iso]); if (b) out[iso] = b[0]; }
       return (tintCache[y] = out);
     }
+    // Per-year index for countryDetail: imp[iso][supplier name] and exp[iso][recipient map iso] (exports by state
+    // suppliers only, like t.exp). Built once per year on first use.
+    const detCache = {};
+    function detailIdx(y) {
+      if (detCache[y]) return detCache[y];
+      const imp = {}, exp = {}, t = years[y];
+      if (t) for (const d of t.all) {
+        const a = imp[d.rMap] || (imp[d.rMap] = {}); a[d.s] = (a[d.s] || 0) + d.v;
+        if (d.from && !nonState(d.s)) { const b = exp[d.from] || (exp[d.from] = {}); b[d.rMap] = (b[d.rMap] || 0) + d.v; }
+      }
+      return (detCache[y] = { imp: imp, exp: exp });
+    }
     const catIdx = (n) => { const i = LEGEND.indexOf(n); return i < 0 ? LEGEND.length : i; };
 
     // Selections shared by all views: {key, label, sup(name) -> bool, rec(iso) -> bool}.
@@ -831,6 +843,25 @@
         if (!t) return { imp: 0, exp: 0, as: [] };
         const eb = t.expBy[iso] || {};
         return { imp: t.imp[iso] || 0, exp: t.exp[iso] || 0, as: Object.keys(eb) };
+      },
+      // Breakdown for the country card and the map tooltip (map position iso, historical states folded in):
+      // imports by supplier name (all suppliers, also non-state) and exports by recipient (map country),
+      // each sorted largest first, top k listed plus the rest as "other". worldShare: imports / world total.
+      countryDetail(year, iso, k) {
+        k = k || 5;
+        const ix = detailIdx(year), imp = ix.imp[iso] || {}, exp = ix.exp[iso] || {}, t = years[year];
+        const part = (o, label) => {
+          const all = Object.keys(o).map((n) => ({ name: label(n), key: n, v: o[n] })).sort((a, b) => b.v - a.v);
+          const tot = all.reduce((s, x) => s + x.v, 0), top = all.slice(0, k);
+          return { total: tot, top: top, other: tot - top.reduce((s, x) => s + x.v, 0), n: all.length };
+        };
+        const im = part(imp, (n) => n), ex = part(exp, rName);
+        im.top.forEach((x) => { x.color = colOf(x.key); });
+        const as = Object.keys((t && t.expBy[iso]) || {}).sort((a, b) => t.expBy[iso][b] - t.expBy[iso][a]);
+        ex.top.forEach((x) => { x.color = colOf(as[0] || ""); });
+        const main = tints(year)[iso] || null;
+        return { year: year, iso: iso, imp: im, exp: ex, as: as, main: main, mainColor: main ? colOf(main) : null,
+          worldTotal: t ? t.total : 0, worldShare: t && t.total ? im.total / t.total : 0 };
       },
       share: tivAll ? tivDrawn / tivAll : 0, // part of all TIV that can be drawn on this map
     };

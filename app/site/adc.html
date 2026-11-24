@@ -506,11 +506,27 @@ tr.ck-dim, .cblock.ck-dim, .chip.ck-dim, .lgk-w.ck-dim { opacity: .4; }
 #map-sel path, #map-sel circle { fill: color-mix(in srgb, var(--accent) 24%, transparent); stroke: var(--accent); stroke-width: 1.8; vector-effect: non-scaling-stroke; pointer-events: none; }
 #map-sel .sel-box { fill: color-mix(in srgb, var(--accent) 10%, transparent); stroke: var(--accent); stroke-width: 1.2; stroke-dasharray: 5 4; vector-effect: non-scaling-stroke; pointer-events: none; }
 .flx-map.selecting, .flx-map.selecting * { cursor: crosshair !important; }
-.map-selpop { position: absolute; right: var(--sp-2); top: var(--sp-2); z-index: 6; width: min(320px, 70%); display: grid; gap: var(--sp-2); padding: var(--sp-3); background: var(--surface); border: 1px solid var(--accent); border-radius: var(--r-md); box-shadow: 0 10px 28px rgba(0,0,0,.5); font-size: 13px; }
+.map-selpop-old { position: absolute; right: var(--sp-2); top: var(--sp-2); z-index: 6; width: min(320px, 70%); display: grid; gap: var(--sp-2); padding: var(--sp-3); background: var(--surface); border: 1px solid var(--accent); border-radius: var(--r-md); box-shadow: 0 10px 28px rgba(0,0,0,.5); font-size: 13px; }
 .map-selpop .names { color: var(--ink2); }
 .map-selpop .hint-s { color: var(--muted); font-size: 12px; }
 .map-tip { position: absolute; right: var(--sp-2); bottom: var(--sp-2); margin: 0; padding: 2px var(--sp-2); border-radius: var(--r-pill); background: var(--surface); border: 1px solid var(--line); font-size: 12px; color: var(--muted); pointer-events: none; }
 #v-country [data-pnl], #v-country [data-flxcmp] { scroll-margin-top: 84px; }
+/* selection tray above the World map (never covers the map; always reserves its height) */
+.map-tray { display: flex; align-items: center; gap: var(--sp-3); min-height: 38px; margin: 0 0 var(--sp-2); padding: 3px var(--sp-3); border: 1px solid var(--line); border-radius: var(--r-md); font-size: 13px; }
+.map-tray.on { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, var(--surface)); }
+.map-tray b { white-space: nowrap; }
+.map-tray .names { flex: 1 1 auto; min-width: 0; color: var(--ink2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.map-tray .btn { flex: none; }
+.map-tray .hint-s { color: var(--muted); font-size: 12px; }
+/* zoom buttons and panning */
+.map-zoom { position: absolute; left: var(--sp-2); top: var(--sp-2); z-index: 5; display: grid; gap: 2px; }
+.map-zoom button { width: 32px; height: 30px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: var(--r-sm); font: 600 15px var(--f-sans); cursor: pointer; }
+.map-zoom button[data-zm="0"] { font-size: 11px; }
+.map-zoom button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+.map-zoom button:disabled { opacity: .4; cursor: default; }
+#map-shapes path { vector-effect: non-scaling-stroke; }
+.flx-map.zoomed #map { cursor: grab; }
+#map.panning, #map.panning * { cursor: grabbing !important; }
 .ct-dock .speed { flex: none; flex-wrap: nowrap; gap: 2px; }
 .ct-dock .speed .btn { min-height: 32px; padding: 0 9px; font-size: 13px; }
 .mode-snap #map-shapes path, .mode-snap #map-dots *, .mode-snap .ov-side *, .mode-snap #map-bubbles * { transition: none !important; animation: none !important; }
@@ -698,8 +714,9 @@ svg, .flx-river, .flx-chord, .ov-river, .ov-side { -webkit-user-select: none; us
           </div>
         </div>
         <div class="legend" id="map-legend"></div>
+        <div class="map-tray" id="map-selpop" aria-live="polite"></div>
         <div class="flx">
-          <div class="flx-map"><div id="map"></div><p class="flx-badge" id="map-badge"></p><p class="map-tip">Tip: hold Shift or ⌘/Ctrl and click countries, or drag a box, to compare them</p><div class="map-selpop" id="map-selpop" hidden></div></div>
+          <div class="flx-map"><div id="map"></div><p class="flx-badge" id="map-badge"></p><div class="map-zoom" id="map-zoom" role="group" aria-label="Zoom"><button type="button" data-zm="+" aria-label="Zoom in">+</button><button type="button" data-zm="-" aria-label="Zoom out" disabled>−</button><button type="button" data-zm="0" aria-label="Show the whole world" disabled>Fit</button></div></div>
           <div class="flx-chord flx-only"><svg data-px role="img" aria-label="Chord ring: suppliers (left) and recipients (right) of the year"></svg></div>
           <div class="ov-side" id="map-side"></div>
           <div class="flx-river flx-only"><svg data-h="110" aria-label="River of time: yearly arms deliveries by supplier, 1950 to 2025. Arrow keys change the year."></svg></div>
@@ -1101,13 +1118,12 @@ svg, .flx-river, .flx-chord, .ov-river, .ov-side { -webkit-user-select: none; us
     if (selDrag && selDrag.moved) { const [ax, ay] = selDrag.a, [bx, by] = selDrag.b; h += '<rect class="sel-box" x="' + Math.min(ax, bx).toFixed(1) + '" y="' + Math.min(ay, by).toFixed(1) + '" width="' + Math.abs(bx - ax).toFixed(1) + '" height="' + Math.abs(by - ay).toFixed(1) + '"></rect>'; }
     g.innerHTML = h;
     const pop = $("#map-selpop"), n = SEL.size;
-    pop.hidden = !n;
-    if (!n) return;
+    pop.classList.toggle("on", !!n);
+    if (!n) { pop.innerHTML = '<span class="hint-s">Tip: hold Shift or ⌘/Ctrl and click countries, or drag a box, to compare them · zoom with + / − or pinch</span>'; return; }
     const names = [...SEL].map((i) => C[i].n), shown = names.slice(0, 6).join(", ") + (names.length > 6 ? " and " + (names.length - 6) + " more" : "");
     const where = S.mapMode === "flow" ? "their arms flows" : S.mapMode === "build" ? "democracy vs. arms" : "their regimes";
-    pop.innerHTML = "<b>" + n + (n === 1 ? " country" : " countries") + " selected</b><span class=\"names\">" + esc(shown) + "</span>" +
-      '<div class="row"><button class="btn primary btn-s" type="button" data-selgo>' + (n === 1 ? "Open its timeline" : "Compare these " + n + " · " + where) + '</button><button class="btn btn-s" type="button" data-selclr>Clear</button></div>' +
-      '<span class="hint-s">Shift or ⌘/Ctrl + click adds or removes · drag a box to add more · Esc clears</span>';
+    pop.innerHTML = "<b>" + n + (n === 1 ? " country" : " countries") + " selected</b><span class=\"names\" title=\"" + esc(names.join(", ")) + "\">" + esc(shown) + "</span>" +
+      '<button class="btn primary btn-s" type="button" data-selgo>' + (n === 1 ? "Open its timeline" : "Compare these " + n + " · " + where) + '</button><button class="btn btn-s" type="button" data-selclr>Clear</button>';
   }
   const selKick = () => { if (!selRaf) selRaf = requestAnimationFrame(selDraw); };
   function selClear() { SEL.clear(); selDrag = null; selKick(); }
@@ -1155,6 +1171,59 @@ svg, .flx-river, .flx-chord, .ov-river, .ov-side { -webkit-user-select: none; us
     document.addEventListener("keydown", (e) => { if (e.key === "Shift" || e.key === "Meta" || e.key === "Control") crossOn(true); if (e.key === "Escape" && SEL.size) selClear(); });
     document.addEventListener("keyup", (e) => { if (!selMod(e)) crossOn(false); });
     window.addEventListener("blur", () => crossOn(false));
+  }
+  selKick();
+  // ---------- zoom and pan on the World map: + / − / Fit buttons, pinch or Cmd/Ctrl + scroll at the pointer,
+  // and drag to move once zoomed in (a click without moving still opens the country). The viewBox changes, so
+  // selection, tooltips and clicks keep working; country borders keep their width (non-scaling stroke).
+  const ZM = { x: 0, y: 0, w: M.w, h: M.h, anim: 0 };
+  const zmMin = M.w / 16;
+  function zmApply() {
+    const svg = selSvg(); if (!svg) return;
+    svg.setAttribute("viewBox", ZM.x.toFixed(2) + " " + ZM.y.toFixed(2) + " " + ZM.w.toFixed(2) + " " + ZM.h.toFixed(2));
+    const zoomed = ZM.w < M.w - .5;
+    $("#map").closest(".flx-map").classList.toggle("zoomed", zoomed);
+    $('#map-zoom [data-zm="0"]').disabled = !zoomed; $('#map-zoom [data-zm="-"]').disabled = !zoomed; $('#map-zoom [data-zm="+"]').disabled = ZM.w <= zmMin + .5;
+  }
+  function zmClamp() { ZM.w = Math.max(zmMin, Math.min(M.w, ZM.w)); ZM.h = ZM.w * M.h / M.w; ZM.x = Math.max(0, Math.min(M.w - ZM.w, ZM.x)); ZM.y = Math.max(0, Math.min(M.h - ZM.h, ZM.y)); }
+  function zmTarget(cx, cy, f) { const w = Math.max(zmMin, Math.min(M.w, ZM.w * f)), k = w / ZM.w; const t = { x: cx - (cx - ZM.x) * k, y: cy - (cy - ZM.y) * k, w, h: w * M.h / M.w }; t.x = Math.max(0, Math.min(M.w - t.w, t.x)); t.y = Math.max(0, Math.min(M.h - t.h, t.y)); return t; }
+  function zmTo(t, ms) {
+    cancelAnimationFrame(ZM.anim);
+    const from = { x: ZM.x, y: ZM.y, w: ZM.w, h: ZM.h }, t0 = performance.now();
+    const step = (now) => { const q = ms ? Math.min(1, (now - t0) / ms) : 1, e = 1 - Math.pow(1 - q, 3);
+      ZM.x = from.x + (t.x - from.x) * e; ZM.y = from.y + (t.y - from.y) * e; ZM.w = from.w + (t.w - from.w) * e; ZM.h = from.h + (t.h - from.h) * e;
+      zmApply(); if (q < 1) ZM.anim = requestAnimationFrame(step); };
+    if (ms) ZM.anim = requestAnimationFrame(step); else step(t0);
+  }
+  $("#map-zoom").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-zm]"); if (!b) return;
+    e.stopPropagation();
+    const cx = ZM.x + ZM.w / 2, cy = ZM.y + ZM.h / 2;
+    if (b.dataset.zm === "0") zmTo({ x: 0, y: 0, w: M.w, h: M.h }, 260);
+    else zmTo(zmTarget(cx, cy, b.dataset.zm === "+" ? 1 / 1.7 : 1.7), 260);
+  });
+  {
+    const host = $("#map");
+    host.addEventListener("wheel", (e) => {
+      if (!(e.ctrlKey || e.metaKey)) return; // plain scrolling keeps scrolling the page
+      e.preventDefault();
+      const [x, y] = selPt(e); zmTo(zmTarget(x, y, Math.exp(e.deltaY * 0.0025)), 0);
+    }, { passive: false });
+    let pan = null, panMoved = false;
+    host.addEventListener("pointerdown", (e) => {
+      if (selMod(e) || e.button !== 0 || ZM.w >= M.w - .5) return;
+      pan = { x: e.clientX, y: e.clientY, vx: ZM.x, vy: ZM.y, id: e.pointerId, on: false }; panMoved = false;
+    });
+    host.addEventListener("pointermove", (e) => {
+      if (!pan) return;
+      const dx = e.clientX - pan.x, dy = e.clientY - pan.y;
+      if (!pan.on && Math.hypot(dx, dy) > 4) { pan.on = true; panMoved = true; try { host.setPointerCapture(pan.id); } catch (err) { /* ignore */ } host.classList.add("panning"); }
+      if (pan.on) { const r = selSvg().getBoundingClientRect(), k = ZM.w / r.width; ZM.x = pan.vx - dx * k; ZM.y = pan.vy - dy * k; zmClamp(); zmApply(); }
+    });
+    const panEnd = () => { pan = null; host.classList.remove("panning"); setTimeout(() => { panMoved = false; }, 0); };
+    host.addEventListener("pointerup", panEnd);
+    host.addEventListener("pointercancel", panEnd);
+    host.addEventListener("click", (e) => { if (panMoved) { e.preventDefault(); e.stopPropagation(); panMoved = false; } }, true);
   }
   // tooltip lines of a country in the regimes and build-up modes (always the shown year's data)
   const confTxt = (c) => c ? "Armed conflict: " + (c === 2 ? "war (1000+ deaths)" : "minor (25–999 deaths)") : "No armed conflict";

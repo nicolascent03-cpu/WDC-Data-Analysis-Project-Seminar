@@ -10,6 +10,11 @@ headingFont = "'IBM Plex Sans Condensed':https://fonts.googleapis.com/css2?famil
 codeFont = "'IBM Plex Mono':https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&display=swap"
 baseFontSize = 15
 headingFontWeights = [600, 600, 600, 600, 500, 500]
+# heading sizes of the HTML version: page title 40 px, section 26 px, card title 20 px, small headings 16 px
+headingFontSizes = ["40px", "26px", "20px", "16px", "14px", "13px"]
+# key numbers: the HTML shows them in 22-24 px, not Streamlit's 36 px
+metricValueFontSize = "26px"
+metricValueFontWeight = 500
 primaryColor = "#e48461"
 backgroundColor = "#111110"
 secondaryBackgroundColor = "#1a1a19"
@@ -21,7 +26,13 @@ showSidebarBorder = true
 baseRadius = "10px"
 buttonRadius = "8px"
 linkUnderline = false
-chartCategoricalColors = ["#3987e5", "#e66767", "#d55181", "#199e70", "#9085e9", "#c98500", "#d95926", "#8a857c"]
+linkColor = "#e48461"
+codeTextColor = "#f0efec"
+codeBackgroundColor = "transparent"  # code spans are used for numbers in IBM Plex Mono, as the .num style of the HTML
+dataframeHeaderBackgroundColor = "#1a1a19"
+dataframeHeaderTextColor = "#959086"
+# country colours of the HTML version (k0 ... k9)
+chartCategoricalColors = ["#3987e5", "#e66767", "#199e70", "#c98500", "#9085e9", "#d95926", "#2bb5c0", "#e07ab0", "#a3b54a", "#b98a68"]
 paddingTop = "0.5rem"
 paddingBottom = "0.5rem"
 

@@ -22,3 +22,12 @@ pages = st.navigation([
     st.Page("native_pages/glossary.py", title="Glossary & FAQ", icon=":material/menu_book:"),
 ], position="top")
 pages.run()
+
+# The same sidebar footer on every page. Besides being useful, it gives every page a sidebar: the top navigation
+# starts right of the sidebar, so pages with and without one would shift the menu sideways when switching pages.
+with st.sidebar:
+    st.divider()
+    st.caption("**Data:** V-Dem v16 (regimes and democracy index), UCDP/PRIO 26.1 (armed conflict), "
+               "SIPRI Arms Transfers (TIV), 1950–2025.")
+    st.page_link("native_pages/about.py", label="About the data", icon=":material/info:")
+    st.page_link("native_pages/glossary.py", label="Glossary & FAQ", icon=":material/menu_book:")

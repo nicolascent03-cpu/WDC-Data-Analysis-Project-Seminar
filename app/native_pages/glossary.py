@@ -3,6 +3,7 @@ the site, and answers to common questions. Native Streamlit only."""
 
 import plotly.graph_objects as go
 import streamlit as st
+from streamlit.errors import StreamlitAPIException
 
 import native_data as nd
 
@@ -128,48 +129,98 @@ TERMS = [
      "Project convention"),
 ]
 
+# FAQ themes: label, icon, one-line description
+THEMES = {
+    "data": ("About the data", ":material/database:", "Where the numbers come from and how they are counted."),
+    "map": ("Reading the map", ":material/map:", "Colours, stripes, borders and the projection."),
+    "use": ("Using the site", ":material/touch_app:", "Comparing countries and getting at the numbers."),
+    "limits": ("What results mean", ":material/balance:", "What the site can and cannot tell you."),
+}
+
+# Pages the FAQ can point to (paths as registered in native_app.py)
+PAGES = {
+    "world_map": ("native_pages/world_map.py", "World map", ":material/public:"),
+    "findings": ("native_pages/findings.py", "Findings", ":material/insights:"),
+    "compare": ("native_pages/compare.py", "Countries & compare", ":material/compare_arrows:"),
+    "about": ("native_pages/about.py", "About the data", ":material/info:"),
+}
+
+# theme, question, short answer, bullets, pages to see, glossary terms to see
 FAQ = [
-    ("Do arms imports cause democracy to decline?",
-     "The site cannot tell. It shows what happened at the same time. Democracy, armed conflict and arms imports "
-     "influence each other (for example, a government at war buys weapons and also restricts freedoms), so any "
-     "pattern is an association, not proof of a cause."),
-    ("Why is TIV not in dollars?",
-     "SIPRI's trend-indicator value measures the military capability transferred, based on production costs of "
-     "comparable weapons. Prices of real deals vary a lot (discounts, aid, credit), so TIV is better for "
-     "comparing volumes over time and between countries."),
-    ("Why is a country grey or missing?",
-     "Grey means V-Dem has no data for that country in that year, for example before independence. Very small "
-     "states such as Monaco or Liechtenstein are not in V-Dem at all."),
-    ("Why is the Soviet Union shown as Russia?",
-     "The map uses today's borders and V-Dem's country codes, in which Russia continues the Soviet Union. The "
-     "same applies to Czechoslovakia (Czechia), Yugoslavia (Serbia) and other historical states."),
-    ("What counts as a war?",
-     "A conflict year with at least 1,000 battle-related deaths (UCDP intensity 2). Conflicts with 25 to 999 "
-     "deaths are minor conflicts. Below 25 deaths UCDP records no armed conflict."),
-    ("When does a conflict 'start' on this site?",
-     "An onset is a year with an active conflict after two years without one. This avoids counting the same "
-     "long conflict many times."),
-    ("Why does the arms-flows map show only some deliveries?",
-     "To keep it readable it draws the largest 25 (or 60) deliveries of the year. The badge shows how much of "
-     "the year's TIV that covers; the chord ring, tables and totals use all deliveries."),
-    ("What do the stripes on the World map mean?",
-     "A striped country had an active armed conflict that year; denser stripes mean a war (1,000+ battle-related "
-     "deaths)."),
-    ("Why do the Findings show placeholder numbers?",
-     "The regressions are still being done in notebook 08. Until they are finished, random preview numbers show "
-     "how the results will look. A warning at the top says so."),
-    ("Where does the data come from?",
-     "UCDP/PRIO Armed Conflict Dataset v26.1 (conflicts), V-Dem v16 Core (regimes and democracy index) and the "
-     "SIPRI Arms Transfers Database (deliveries 1950 to 2025). See About the data for how they are joined."),
-    ("How do I compare countries?",
-     "Open Countries & compare and pick countries in the sidebar, or choose a group such as the European Union "
-     "or the G7. The year slider and Play move all charts together."),
-    ("Why the Equal Earth map and not the usual one?",
-     "The common Mercator map makes countries near the poles look much bigger than they are. Equal Earth keeps "
-     "areas in proportion, which matters when countries are compared on the map."),
-    ("Can I see the exact numbers?",
-     "Yes: most charts have a 'Show the numbers' table, and every table can be searched and downloaded from its "
-     "toolbar."),
+    # ---------------------------------------------------------------- about the data
+    ("data", "Where does the data come from?",
+     "Three public datasets, joined into one country-year table.",
+     ["**Conflicts:** UCDP/PRIO Armed Conflict Dataset v26.1",
+      "**Regimes and democracy index:** V-Dem v16 Core",
+      "**Arms deliveries:** SIPRI Arms Transfers Database, 1950 to 2025"],
+     ["about"], ["Country-year panel"]),
+    ("data", "Why is TIV not in dollars?",
+     "TIV measures military capability transferred, not the price paid.",
+     ["It is based on production costs of comparable weapons.",
+      "Prices of real deals vary a lot (discounts, aid, credit).",
+      "So TIV is better for comparing volumes over time and between countries."],
+     [], ["TIV (trend-indicator value)"]),
+    ("data", "What counts as a war?",
+     "A conflict year with at least 1,000 battle-related deaths.",
+     ["**War:** 1,000+ deaths (UCDP intensity 2)",
+      "**Minor conflict:** 25 to 999 deaths",
+      "**Below 25 deaths:** UCDP records no armed conflict"],
+     [], ["War", "Minor conflict"]),
+    ("data", "When does a conflict 'start' on this site?",
+     "In a year with an active conflict after two years without one.",
+     ["We call this a conflict onset.",
+      "It avoids counting the same long conflict many times."],
+     ["findings"], ["Conflict onset"]),
+
+    # ---------------------------------------------------------------- reading the map
+    ("map", "Why is a country grey or missing?",
+     "Grey means V-Dem has no data for that country in that year.",
+     ["For example, years before independence.",
+      "Very small states such as Monaco or Liechtenstein are not in V-Dem at all."],
+     ["world_map"], []),
+    ("map", "Why is the Soviet Union shown as Russia?",
+     "The map uses today's borders and V-Dem's country codes.",
+     ["In those codes, Russia continues the Soviet Union.",
+      "The same goes for Czechoslovakia (Czechia), Yugoslavia (Serbia) and other historical states."],
+     ["world_map"], ["Historical states"]),
+    ("map", "What do the stripes on the World map mean?",
+     "A striped country had an active armed conflict that year.",
+     ["Denser stripes mean a war (1,000+ battle-related deaths)."],
+     ["world_map"], ["Armed conflict"]),
+    ("map", "Why does the arms-flows map show only some deliveries?",
+     "To stay readable, it draws only the year's largest 25 (or 60) deliveries.",
+     ["The badge shows how much of the year's TIV those cover.",
+      "The chord ring, tables and totals use **all** deliveries."],
+     ["world_map"], []),
+    ("map", "Why the Equal Earth map and not the usual one?",
+     "Equal Earth keeps every country's area in proportion.",
+     ["The common Mercator map makes countries near the poles look much bigger than they are.",
+      "True areas matter when countries are compared on the map."],
+     ["world_map"], ["Equal Earth projection"]),
+
+    # ---------------------------------------------------------------- using the site
+    ("use", "How do I compare countries?",
+     "Open Countries & compare and pick countries in the sidebar.",
+     ["Or choose a group, such as the European Union or the G7.",
+      "The year slider and Play move all charts together."],
+     ["compare"], []),
+    ("use", "Can I see the exact numbers?",
+     "Yes: most charts have a 'Show the numbers' table.",
+     ["Every table can be searched and downloaded from its toolbar."],
+     ["findings", "compare"], []),
+
+    # ---------------------------------------------------------------- what results mean
+    ("limits", "Do arms imports cause democracy to decline?",
+     "The site cannot tell: it shows what happened at the same time.",
+     ["Democracy, armed conflict and arms imports influence each other.",
+      "For example, a government at war buys weapons and also restricts freedoms.",
+      "So any pattern is an association, not proof of a cause."],
+     ["findings"], ["Correlation vs causation"]),
+    ("limits", "Why do the Findings show placeholder numbers?",
+     "The regressions in notebook 08 are not finished yet.",
+     ["Until they are, random preview numbers show how the results will look.",
+      "A warning at the top of the Findings page says so."],
+     ["findings"], ["Placeholder numbers"]),
 ]
 
 # ------------------------------------------------------------------ layout helpers
@@ -196,6 +247,48 @@ def others(cat):
     return [t for t in TERMS if t[1] == cat and t[0] not in SPECIAL]
 
 
+def faq_text(item):
+    """Everything a FAQ entry says, lower-cased, for the search."""
+    theme, question, short, bullets, _, terms = item
+    return " ".join([THEMES[theme][0], question, short, *bullets, *terms]).lower()
+
+
+def look_up(term):
+    st.session_state["g_query"] = term
+
+
+def faq_card(item, key):
+    """One question: the question, a bold one-line answer, a few bullets, then links to pages and terms."""
+    theme, question, short, bullets, pages, terms = item
+    st.markdown(f"**{question}**")
+    st.markdown(f":blue[{short}]")
+    st.markdown("\n".join(f"- {b}" for b in bullets))
+    if pages or terms:
+        with st.container(horizontal=True, vertical_alignment="center", gap="small"):
+            st.caption("See also", width="content")
+            for p in pages:
+                path, label, icon = PAGES[p]
+                try:
+                    st.page_link(path, label=label, icon=icon, width="content")
+                except StreamlitAPIException:  # page run on its own, outside native_app.py's navigation
+                    st.caption(f"{icon} {label} page", width="content")
+            for j, term in enumerate(terms):
+                st.button(term, icon=":material/menu_book:", type="tertiary", key=f"{key}_t{j}",
+                          on_click=look_up, args=(term,), help="Look this term up in the glossary")
+
+
+def faq_grid(items, key):
+    """FAQ cards two per row in bordered columns, so the cards of one row have the same height."""
+    for i in range(0, len(items), 2):
+        pair = items[i:i + 2]
+        # a lone last card keeps half the width, without an empty bordered box beside it
+        boxes = (st.columns(2, border=True, gap="medium") if len(pair) == 2
+                 else [st.columns(2, gap="medium")[0].container(border=True)])
+        for j, (col, item) in enumerate(zip(boxes, pair)):
+            with col:
+                faq_card(item, f"{key}_{i + j}")
+
+
 panel = nd.load_panel()
 LAST = int(panel["year"].max())
 now = panel[panel["year"] == LAST]
@@ -219,19 +312,21 @@ def regime_scale():
 # ------------------------------------------------------------------ page
 st.title("Glossary and FAQ")
 query = st.text_input("Search", placeholder="Search terms and questions, e.g. war, TIV, autocracy",
-                      icon=":material/search:", label_visibility="collapsed")
+                      icon=":material/search:", label_visibility="collapsed", key="g_query")
 q = query.strip().lower()
 
 if q:
     hits = [t for t in TERMS if q in t[0].lower() or q in t[2].lower()]
-    faq_hits = [f for f in FAQ if q in f[0].lower() or q in f[1].lower()]
+    faq_hits = [f for f in FAQ if q in faq_text(f)]
     st.caption(f"{len(hits)} terms and {len(faq_hits)} questions match “{query}”.")
     if not hits and not faq_hits:
         st.info("Nothing matches. Try a shorter word.", icon=":material/search_off:")
-    term_rows(hits)
-    for question, answer in faq_hits:
-        with st.expander(question, icon=":material/help:"):
-            st.markdown(answer)
+    if hits:
+        st.markdown("##### :material/menu_book: Terms")
+        term_rows(hits)
+    if faq_hits:
+        st.markdown("##### :material/help: Questions")
+        faq_grid(faq_hits, "s")
     st.stop()
 
 t_reg, t_con, t_arms, t_meth, t_map, t_faq = st.tabs(
@@ -281,7 +376,14 @@ with t_map:
     term_rows(others("Map and data"))
 
 with t_faq:
-    left, right = st.columns(2, gap="medium")
-    for i, (question, answer) in enumerate(FAQ):
-        with (left if i % 2 == 0 else right).expander(question):
-            st.markdown(answer)
+    st.caption(f"{len(FAQ)} short answers in {len(THEMES)} themes. Pick a theme, or use the search box above.")
+    theme = st.segmented_control(
+        "Theme", ["all", *THEMES], default="all", required=True, key="g_faq_theme", label_visibility="collapsed",
+        format_func=lambda k: ":material/apps: All" if k == "all" else f"{THEMES[k][1]} {THEMES[k][0]}")
+    for k, (label, icon, blurb) in THEMES.items():
+        if theme not in ("all", k):
+            continue
+        items = [f for f in FAQ if f[0] == k]
+        st.markdown(f"#### {icon} {label}")
+        st.caption(f"{blurb} · {len(items)} questions")
+        faq_grid(items, f"f_{k}")

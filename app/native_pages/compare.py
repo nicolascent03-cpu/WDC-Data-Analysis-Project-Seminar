@@ -24,6 +24,7 @@ import native_data as nd
 
 Y0, Y1 = 1950, 2025
 INK, INK2, MUTED, LINE = "#f0efec", "#c3c2b7", "#959086", "#2c2c2a"
+BG = "#111110"  # page background, for the casing under scatter paths
 FONT = "IBM Plex Sans"
 SPEEDS = {"0.5×": 2.4, "1×": 1.2, "2×": 0.6}  # seconds per year
 PERIODS = {"1950–2025": (1950, 2025), "Cold War": (1950, 1991), "Since 1992": (1992, 2025)}
@@ -404,6 +405,40 @@ def sc_wraps(d, x, y):
     return out
 
 
+def fade(years, start, y, low=.22):
+    """Opacity by age along a path: the year itself fully visible, the start of the path at `low`."""
+    span = max(y - start, 1)
+    return low + (1 - low) * (np.clip((years - start) / span, 0, 1) ** 1.4)
+
+
+def sc_path(d, y, start, x, yy, colour, dash=None, width=2.2):
+    """A path drawn as one segment per pair of consecutive years, each as visible as its newer end is recent (older:
+    fainter), newest on top. A dark casing under every segment keeps crossing stretches apart when a path doubles
+    back on itself."""
+    segs = []
+    for iso, t in d.sort_values("year").groupby("iso3"):
+        t = t[["x", "democracy_index", "year", "iso3"] + (["dash"] if "dash" in t else [])]
+        nxt = t.shift(-1)
+        s = t.assign(x2=nxt["x"], y2=nxt["democracy_index"], year=nxt["year"]).iloc[:-1]
+        segs.append(s)
+    if not segs:
+        return []
+    s = pd.concat(segs).dropna(subset=["x2", "y2"])
+    s = s[s["year"] <= y].assign(op=lambda f: fade(f["year"], start, y)).sort_values("year")
+    enc = dict(x2="x2:Q", y2="y2:Q", opacity=alt.Opacity("op:Q", scale=None), order="year:Q")
+    out = []
+    # casing and colour per decade of age, oldest first, so a newer stretch cuts cleanly across an older one
+    for age in sorted(((y - s["year"]) // 10).unique(), reverse=True):
+        g = s[(y - s["year"]) // 10 == age]
+        casing = alt.Chart(g).mark_rule(color=BG, strokeWidth=width + 2.6, strokeCap="round").encode(x, yy, **enc)
+        col = (alt.Chart(g).mark_rule(color=colour, strokeWidth=width, strokeCap="round") if isinstance(colour, str)
+               else alt.Chart(g).mark_rule(strokeWidth=width, strokeCap="round").encode(color=colour))
+        if dash is not None:
+            col = col.encode(strokeDash=dash)
+        out += [casing, col.encode(x, yy, **enc)]
+    return out
+
+
 def sc_finish(layers):
     return (alt.layer(*layers).properties(height=SC_H)
             .configure_view(stroke=None).configure(background="transparent", font=FONT + ", sans-serif"))
@@ -441,14 +476,17 @@ def scatter_single(iso, a, b, y, full):
     x, yy = sc_axes(ax)
     c = COL[iso]
     d["size"], d["ring"] = d["intensity"].map(SIZE), d["intensity"].map(RING)
-    last = d[d["year"].between(y - 10, y)]
     dec = d[(d["year"] % 10 == 0) & (d["year"] != y)]
     now = d[d["year"] == y]
-    layers = sc_strip(ax) + sc_wraps(d, x, yy) + [
-        alt.Chart(d).mark_line(color=c, strokeWidth=1.2, opacity=.45).encode(x, yy, order="year:Q"),
-        alt.Chart(last).mark_line(color=c, strokeWidth=2.8).encode(x, yy, order="year:Q"),
-        alt.Chart(d).mark_point(filled=True, color=c, opacity=.9, stroke="#111110", cursor="pointer")
-        .encode(x, yy, size=alt.Size("size:Q", scale=None), strokeWidth=alt.StrokeWidth("ring:Q", scale=None), tooltip=TT)
+    # the path up to the year fades with age (the year itself strongest); the years after it stay as a faint line
+    d["op"] = np.where(d["year"] <= y, fade(d["year"], a, y) * .95, .14)
+    later = d[d["year"] >= y]
+    layers = sc_strip(ax) + sc_wraps(d[d["year"] <= y], x, yy) + [
+        alt.Chart(later).mark_line(color=c, strokeWidth=1, opacity=.18, strokeDash=[3, 3]).encode(x, yy, order="year:Q"),
+        *sc_path(d, y, a, x, yy, c, width=2.4),
+        alt.Chart(d.sort_values("year")).mark_point(filled=True, color=c, stroke="#111110", cursor="pointer")
+        .encode(x, yy, size=alt.Size("size:Q", scale=None), strokeWidth=alt.StrokeWidth("ring:Q", scale=None),
+                opacity=alt.Opacity("op:Q", scale=None), order="year:Q", tooltip=TT)
         .add_params(PICK),
         alt.Chart(dec).mark_text(align="left", dx=6, dy=-8, color=MUTED, fontSize=11).encode(x, yy, text="year:N"),
         alt.Chart(now).mark_point(filled=True, color=c, size=330, stroke=INK,
@@ -459,8 +497,10 @@ def scatter_single(iso, a, b, y, full):
 
 
 @st.cache_data
-def scatter_compare(isos, a, b, y, follow, full):
-    d = period_panel(isos, max(Y0, y - 10), y).dropna(subset=["democracy_index"])
+def scatter_compare(isos, a, b, y, follow, full, whole=False):
+    """whole: the followed countries' paths from the start of the period (fading with age), else the last 10 years."""
+    start = a if whole else max(Y0, y - 10)
+    d = period_panel(isos, start, y).dropna(subset=["democracy_index"])
     if d.empty or not (d["year"] == y).any():
         return None
     focus = set(follow)
@@ -476,15 +516,15 @@ def scatter_compare(isos, a, b, y, follow, full):
     # one layer for every clickable point (trail dots, then faint bubbles, then followed bubbles on top), so the
     # click selection lives on a single layer
     pts = pd.concat([
-        trail[trail["year"] < y].assign(size=lambda f: f["intensity"].map(SIZE), ring=lambda f: f["intensity"].map(RING), op=.8, z=0),
+        trail[trail["year"] < y].assign(size=lambda f: f["intensity"].map(SIZE), ring=lambda f: f["intensity"].map(RING),
+                                        op=lambda f: fade(f["year"], start, y) * .9, z=0),
         now.assign(size=250, ring=lambda f: f["intensity"].map(RING) * 1.3, op=np.where(now["iso3"].isin(focus), 1.0, .2),
                    z=np.where(now["iso3"].isin(focus), 2, 1)),
-    ]).sort_values(["z", "iso3", "year"])
+    ]).sort_values(["z", "year", "iso3"])
     lab = now[now["iso3"].isin(focus)].assign(label=lambda f: f["country_name"].map(short_name))
     sides = label_sides(lab, ax)
     lab = lab.assign(side=lab["iso3"].map(sides)).dropna(subset=["side"])
-    layers = sc_strip(ax) + sc_wraps(trail, x, yy) + [
-        alt.Chart(trail).mark_line(strokeWidth=2, opacity=.8).encode(x, yy, colour, dash, detail="iso3:N", order="year:Q"),
+    layers = sc_strip(ax) + sc_wraps(trail[trail["year"] >= y - 10], x, yy) + sc_path(trail, y, start, x, yy, colour, dash) + [
         alt.Chart(pts).mark_point(filled=True, stroke="#111110", cursor="pointer")
         .encode(x, yy, colour, size=alt.Size("size:Q", scale=None), strokeWidth=alt.StrokeWidth("ring:Q", scale=None),
                 opacity=alt.Opacity("op:Q", scale=None), order="z:Q", tooltip=TT)
@@ -604,8 +644,10 @@ def regime_chart(isos, a, b):
                         legend=alt.Legend(orient="top", direction="horizontal", title=None, columns=4 if len(isos) > 1 else 2,
                                           symbolType="square")),
         tooltip=["Country:N", "Regime:N", "Years:N"])
-    h = 26 * len(order) + 64  # the whole chart: rows, legend and year axis
-    return vl_finish(alt.layer(bars, year_rule()).properties(height=h)), h + 10
+    # a fixed step per row: the plot gets 30 px a country, and the legend and year axis come on top of that (a fixed
+    # total height left almost nothing for the bars when the legend took two rows)
+    h = 30 * len(order) + (48 if len(isos) == 1 else 26) + 40
+    return vl_finish(alt.layer(bars, year_rule()).properties(height=alt.Step(30))), h + 10
 
 
 @st.cache_data
@@ -1000,8 +1042,9 @@ def body():
     st.caption(f"Regime, democracy index, armed conflict and arms imports, {a}–{b}. Move the year or press Play."
                if single else f"{len(sel)} countries side by side, {a}–{b}: " + ", ".join(names[:8]) + (f" and {len(sel) - 8} more." if len(sel) > 8 else "."))
 
-    # the year bar: Play, speed, year and period (the slider follows Play)
-    with st.container(horizontal=True, vertical_alignment="center", gap="medium"):
+    # the year bar, pinned to the bottom of the screen (st.bottom) so it stays in reach while scrolling: Play, speed,
+    # year and period (the slider follows Play). The fragment writes there on every run, the full one included.
+    with st.bottom, st.container(horizontal=True, vertical_alignment="center", gap="medium"):
         st.button("Pause" if ss["playing"] else "Play", icon=":material/pause:" if ss["playing"] else ":material/play_arrow:",
                   type="primary", on_click=toggle_play, key="cc_play", help="Play through the years of the period.")
         st.segmented_control("Speed", list(SPEEDS), key="cc_speed", required=True, on_change=full_rerun,
@@ -1083,7 +1126,7 @@ def body():
         full = h_r.toggle("Full 0–1 scale", key="cc_full_scale", help="Show the whole democracy index and the whole period's arms range "
                           "instead of fitting the axes to the points on screen. The axes then stay put while playing.")
         if single:
-            st.caption(f"The path of {names[0]} through time. Thin line: the whole period; strong part: the last 10 years.")
+            st.caption(f"The path of {names[0]} up to {y}: the older a stretch, the fainter it is. Dotted: the years after {y}.")
             sc = scatter_single(sel[0], a, b, y, full)
             follow = ()
         else:
@@ -1093,9 +1136,9 @@ def body():
             ss["cc_follow"] = [i for i in ss.get("cc_follow", []) if i in isos]
             follow = tuple(st.multiselect("Follow", list(isos), format_func=NAMES.get, key="cc_follow",
                                           placeholder="Pick countries to show their trails and labels",
-                                          help="Followed countries get a 10-year trail and a label here, and stand out in the "
+                                          help="Followed countries get their path and a label here, and stand out in the "
                                                "democracy and supplier charts. Clicking a faint bubble follows it too."))
-            sc = scatter_compare(isos, a, b, y, follow, full)
+            sc = scatter_compare(isos, a, b, y, follow, full, whole=not ss["playing"])
         if sc is None:
             st.info(f"No V-Dem data in {y} for {'this country' if single else 'these countries'}. Move the year or pick another period.",
                     icon=":material/info:")
@@ -1104,7 +1147,8 @@ def body():
             if not single:
                 have = set(now.index[now["democracy_index"].notna()])
                 muted_list(f"Not in the scatter, no data for {y}", [i for i in isos if i not in have])
-        st.caption(SC_GUIDE + ("" if single else " Trails: the previous 10 years of the followed countries; the others are faint.")
+        st.caption(SC_GUIDE + ("" if single else " Paths of the followed countries: the whole period when paused, the last 10 years "
+                                             "while playing; older stretches are fainter. The others are faint bubbles.")
                    + " Big ringed dot: war year; small ringed dot: minor conflict; pale band: several conflict years in a row "
                    "(solid: war, dotted: minor). Click a dot to jump to its year."
                    + (" Left strip: no arms received." if sc is not None and sc[1] else ""))

@@ -10,6 +10,7 @@ numbers. Controls live in the sidebar; Play advances the year for the whole page
 import json
 from datetime import datetime
 
+import altair as alt
 import numpy as np
 import pandas as pd
 import plotly.express as px
@@ -110,12 +111,12 @@ def clear_comparison():
 def scatter_clicked():
     """A click on a dot of the scatter: jump to that year; in a comparison, also follow that country."""
     try:
-        pts = ss["cc_scatter"]["selection"]["points"]
+        pts = ss["cc_scatter"]["selection"]["pick"]
     except (KeyError, TypeError):
         return
-    if not pts or "customdata" not in pts[0]:
+    if not pts or "year" not in pts[0]:
         return
-    year, iso = pts[0]["customdata"][:2]
+    year, iso = pts[0]["year"], pts[0].get("iso3")
     p0, p1 = period_bounds()
     ss["year"] = min(max(int(year), p0), p1)
     ss["cc_year_slider"] = ss["year"]
@@ -319,135 +320,161 @@ def scatter_axis(vis, period, full):
     return ax
 
 
-def scatter_frame(fig, ax, height):
-    if ax["any_zero"]:
-        fig.add_vrect(x0=ax["strip"][0], x1=ax["strip"][1], fillcolor=LINE, opacity=.6, line_width=0, layer="below")
-    base_layout(fig, height, showlegend=False, margin=dict(l=0, r=12, t=10, b=0))
-    fig.update_xaxes(type="log", range=ax["range"], tickvals=ax["tickvals"], ticktext=ax["ticktext"],
-                     title=dict(text="Arms received in the previous 10 years (TIV, log scale)", font=dict(color=MUTED, size=12)))
-    fig.update_yaxes(range=ax["y"], title=dict(text="Democracy index", font=dict(color=MUTED, size=12)))
+# The scatter is an Altair (Vega-Lite) chart, not Plotly: when the year changes, Streamlit swaps Vega's drawing in
+# one step, while a Plotly chart is rebuilt from scratch (it blanks for a moment, which flickers while playing).
+SC_H = 440
+SIZE = {2: 120, 1: 60, 0: 26}  # dot area (px²) per conflict intensity: war, minor, none
+RING = {2: 2.4, 1: 1.2, 0: 0.0}  # outline width per conflict intensity
+WRAP = {"war": ("rgba(236,232,224,0.2)", 8, [1, 0]), "minor": ("rgba(236,232,224,0.16)", 6, [2, 4])}
 
 
-def ring(intensity, base=0.0):
-    """Outline width per conflict intensity: war = strong ring, minor = thin ring, none = base."""
-    return np.select([intensity == 2, intensity == 1], [2.4, 1.2], base)
+def sc_prep(d, ax):
+    """Plot columns: x (arms on the log axis, 'none' strip for zero), and readable tooltip fields."""
+    d = d.copy()
+    d["x"] = np.where(d["arms_10"] > 0, d["arms_10"], ax["none_x"])
+    d["Country"] = d["country_name"]
+    d["Regime"] = d["regime_label"].str.capitalize()
+    d["Conflict"] = d["max_intensity"].map(CONFLICT)
+    d["from"] = (d["year"] - 9).clip(lower=Y0)
+    d["intensity"] = d["max_intensity"].fillna(0).astype(int)
+    return d
 
 
-def trail_marker(t, colour):
-    """A dot per year: war years bigger with a dark outline, minor conflicts smaller with a thin one."""
-    return dict(color=colour, size=np.select([t["max_intensity"] == 2, t["max_intensity"] == 1], [10, 7], 5),
-                line=dict(color="#111110", width=ring(t["max_intensity"])))
+def sc_axes(ax):
+    lo, hi = ax["range"]
+    label = " : ".join(f"abs(datum.value - {v!r}) < {v * 1e-6!r} ? '{t}'" for v, t in zip(ax["tickvals"], ax["ticktext"])) + " : ''"
+    x = alt.X("x:Q", scale=alt.Scale(type="log", domain=[10 ** lo, 10 ** hi], clamp=True, nice=False),
+              axis=alt.Axis(values=list(ax["tickvals"]), labelExpr=label, title="Arms received in the previous 10 years (TIV, log scale)",
+                            titleColor=MUTED, titleFontWeight="normal", grid=True, gridColor=LINE, labelColor=INK2))
+    y = alt.Y("democracy_index:Q", scale=alt.Scale(domain=list(ax["y"]), clamp=True, nice=False, zero=False),
+              axis=alt.Axis(title="Democracy index", titleColor=MUTED, titleFontWeight="normal", gridColor=LINE, labelColor=INK2,
+                            tickCount=6))
+    return x, y
 
 
-def conflict_wraps(fig, t):
-    """Bands along a path wherever two consecutive years both had an armed conflict: a solid band when both
-    years were war, a dashed one otherwise (as in the HTML version)."""
-    t = t.sort_values("year")
-    segs = {"war": ([], []), "minor": ([], [])}
-    prev = None
-    for x, yv, yr, c in t[["x", "democracy_index", "year", "max_intensity"]].itertuples(index=False):
-        if prev is not None and prev[2] == yr - 1 and prev[3] and c:
-            xs, ys = segs["war" if prev[3] == 2 and c == 2 else "minor"]
-            xs += [prev[0], x, None]
-            ys += [prev[1], yv, None]
-        prev = (x, yv, yr, c)
-    for kind, (xs, ys) in segs.items():
-        if xs:
-            fig.add_trace(go.Scatter(x=xs, y=ys, mode="lines", hoverinfo="skip", showlegend=False,
-                                     line=dict(color="rgba(236,232,224,0.2)" if kind == "war" else "rgba(236,232,224,0.16)",
-                                               width=8 if kind == "war" else 6, dash="solid" if kind == "war" else "dot")))
+TT = [alt.Tooltip("Country:N"), alt.Tooltip("year:O", title="Year"), alt.Tooltip("democracy_index:Q", title="Democracy index", format=".2f"),
+      alt.Tooltip("Regime:N"), alt.Tooltip("arms_10:Q", title="Arms received in 10 years (TIV)", format=",.0f"),
+      alt.Tooltip("arms_imports_tiv:Q", title="In that year alone (TIV)", format=",.0f"), alt.Tooltip("Conflict:N", title="Armed conflict")]
+PICK = alt.selection_point(name="pick", fields=["year", "iso3"], on="click", empty=False)
 
 
-def place_labels(fig, pts, bubbles, ax, width_px=480, height_px=370):
-    """Greedy labels: biggest importers first, to the right of the bubble (or the left), skipped when they would
-    overlap another label or bubble. Positions are estimated in pixels of the plot area."""
+def sc_strip(ax):
+    """Grey strip left of the log axis for points without arms received."""
+    if not ax["any_zero"]:
+        return []
+    s = pd.DataFrame({"x": [ax["strip"][0]], "x2": [ax["strip"][1]]})
+    return [alt.Chart(s).mark_rect(color=LINE, opacity=.6).encode(x=alt.X("x:Q", scale=alt.Scale(type="log")), x2="x2:Q")]
+
+
+def sc_wraps(d, x, y):
+    """Bands along a path wherever two consecutive years both had an armed conflict: solid when both were war,
+    dotted otherwise (as in the HTML version)."""
+    rows = []
+    for iso, t in d.sort_values("year").groupby("iso3"):
+        prev = None
+        for xv, yv, yr, c in t[["x", "democracy_index", "year", "intensity"]].itertuples(index=False):
+            if prev is not None and prev[2] == yr - 1 and prev[3] and c:
+                kind = "war" if prev[3] == 2 and c == 2 else "minor"
+                seg = f"{iso}{yr}"
+                rows += [dict(x=prev[0], democracy_index=prev[1], seg=seg, kind=kind, k=0), dict(x=xv, democracy_index=yv, seg=seg, kind=kind, k=1)]
+            prev = (xv, yv, yr, c)
+    w = pd.DataFrame(rows, columns=["x", "democracy_index", "seg", "kind", "k"])
+    out = []
+    for kind, (colour, width, dash) in WRAP.items():
+        out.append(alt.Chart(w[w["kind"] == kind]).mark_line(color=colour, strokeWidth=width, strokeDash=dash, strokeCap="round")
+                   .encode(x, y, detail="seg:N", order="k:Q"))
+    return out
+
+
+def sc_finish(layers):
+    return (alt.layer(*layers).properties(height=SC_H)
+            .configure_view(stroke=None).configure(background="transparent", font=FONT))
+
+
+def label_sides(pts, ax, width_px=480, height_px=370):
+    """Greedy labels: biggest importers first, right of the bubble (or left), skipped when they would overlap another
+    label or bubble. Returns {iso: 'right' | 'left'}; positions are estimated in pixels of the plot area."""
     x0, x1 = ax["range"]
     y0, y1 = ax["y"]
     to_px = lambda x, yv: ((np.log10(x) - x0) / (x1 - x0) * width_px, (yv - y0) / (y1 - y0) * height_px)
-    placed = [(bx - 8, by - 8, bx + 8, by + 8) for bx, by in (to_px(r["x"], r["democracy_index"]) for _, r in bubbles.iterrows())]
-    for _, p in pts.sort_values("arms_10", ascending=False).iterrows():
-        px_, py_ = to_px(p["x"], p["democracy_index"])
-        w, h = 7.6 * len(p["label"]) + 8, 18
+    placed = [(bx - 8, by - 8, bx + 8, by + 8) for bx, by in (to_px(r.x, r.democracy_index) for r in pts.itertuples())]
+    sides = {}
+    for p in pts.sort_values("arms_10", ascending=False).itertuples():
+        px_, py_ = to_px(p.x, p.democracy_index)
+        w, h = 7.6 * len(p.label) + 8, 18
         for side in ([1, -1] if px_ < width_px - w - 14 else [-1, 1]):
-            bx = (px_ + 12, px_ + 12 + w) if side == 1 else (px_ - 12 - w, px_ - 12)
-            box = (bx[0], py_ - h / 2, bx[1], py_ + h / 2)
+            box = (px_ + 12, py_ - h / 2, px_ + 12 + w, py_ + h / 2) if side == 1 else (px_ - 12 - w, py_ - h / 2, px_ - 12, py_ + h / 2)
             if box[0] < 0 or box[2] > width_px:
                 continue
             if not any(box[0] < q[2] and box[2] > q[0] and box[1] < q[3] and box[3] > q[1] for q in placed):
                 placed.append(box)
-                fig.add_annotation(x=np.log10(p["x"]), y=p["democracy_index"], text=p["label"], showarrow=False,
-                                   xanchor="left" if side == 1 else "right", xshift=10 * side, font=dict(color=INK, size=12))
+                sides[p.iso3] = "right" if side == 1 else "left"
                 break
-
-
-def hover_text(d):
-    return (d["country_name"] + " · " + d["year"].astype(str) + "<br>Democracy index " + d["democracy_index"].round(2).astype(str)
-            + " (" + d["regime_label"] + ")<br>Arms received " + (d["year"] - 9).clip(lower=Y0).astype(str) + "–" + d["year"].astype(str)
-            + ": " + d["arms_10"].round(0).astype(int).map("{:,}".format) + " TIV<br>In " + d["year"].astype(str) + " alone: "
-            + d["arms_imports_tiv"].round(0).astype(int).map("{:,}".format) + " TIV<br>" + d["max_intensity"].map(CONFLICT)
-            + "<br><i>Click to jump to " + d["year"].astype(str) + "</i>")
+    return sides
 
 
 @st.cache_data
 def scatter_single(iso, a, b, y, full):
-    d = period_panel((iso,), a, b).dropna(subset=["democracy_index"]).copy()
+    d = period_panel((iso,), a, b).dropna(subset=["democracy_index"])
     if d.empty:
         return None
     ax = scatter_axis(d, d, full)
-    fig = go.Figure()
-    d["x"] = np.where(d["arms_10"] > 0, d["arms_10"], ax["none_x"])
-    d["hover"] = hover_text(d)
+    d = sc_prep(d, ax).sort_values("year")
+    x, yy = sc_axes(ax)
     c = COL[iso]
-    conflict_wraps(fig, d)
-    fig.add_trace(go.Scatter(x=d["x"], y=d["democracy_index"], mode="lines", line=dict(color=c, width=1.2), opacity=.45, hoverinfo="skip"))
+    d["size"], d["ring"] = d["intensity"].map(SIZE), d["intensity"].map(RING)
     last = d[d["year"].between(y - 10, y)]
-    fig.add_trace(go.Scatter(x=last["x"], y=last["democracy_index"], mode="lines", line=dict(color=c, width=2.8), hoverinfo="skip"))
-    fig.add_trace(go.Scatter(x=d["x"], y=d["democracy_index"], mode="markers", text=d["hover"], hoverinfo="text",
-                             customdata=np.column_stack([d["year"], d["iso3"]]), marker=trail_marker(d, c), opacity=.9))
-    dec = d[(d["year"] % 10 == 0) & (d["year"] != y)]  # decade labels, as in the HTML version
-    fig.add_trace(go.Scatter(x=dec["x"], y=dec["democracy_index"], mode="text", text=dec["year"].astype(str), textposition="top right",
-                             textfont=dict(color=MUTED, size=11), hoverinfo="skip"))
+    dec = d[(d["year"] % 10 == 0) & (d["year"] != y)]
     now = d[d["year"] == y]
-    if len(now):
-        fig.add_trace(go.Scatter(x=now["x"], y=now["democracy_index"], mode="markers+text", text=[str(y)], textposition="top center",
-                                 textfont=dict(color=INK, size=13), hoverinfo="skip",
-                                 marker=dict(color=c, size=18, line=dict(color=INK, width=max(1.5, float(ring(now["max_intensity"])[0]))))))
-    scatter_frame(fig, ax, 440)
-    return fig
+    layers = sc_strip(ax) + sc_wraps(d, x, yy) + [
+        alt.Chart(d).mark_line(color=c, strokeWidth=1.2, opacity=.45).encode(x, yy, order="year:Q"),
+        alt.Chart(last).mark_line(color=c, strokeWidth=2.8).encode(x, yy, order="year:Q"),
+        alt.Chart(d).mark_point(filled=True, color=c, opacity=.9, stroke="#111110", cursor="pointer")
+        .encode(x, yy, size=alt.Size("size:Q", scale=None), strokeWidth=alt.StrokeWidth("ring:Q", scale=None), tooltip=TT)
+        .add_params(PICK),
+        alt.Chart(dec).mark_text(align="left", dx=6, dy=-8, color=MUTED, fontSize=11).encode(x, yy, text="year:N"),
+        alt.Chart(now).mark_point(filled=True, color=c, size=330, stroke=INK,
+                                  strokeWidth=max(1.5, RING[int(now["intensity"].iloc[0])]) if len(now) else 1.5).encode(x, yy),
+        alt.Chart(now).mark_text(dy=-18, color=INK, fontSize=13, fontWeight=600).encode(x, yy, text="year:N"),
+    ]
+    return sc_finish(layers), ax["any_zero"]
 
 
 @st.cache_data
 def scatter_compare(isos, a, b, y, follow, full):
-    d = period_panel(isos, max(Y0, y - 10), y).dropna(subset=["democracy_index"]).copy()
+    d = period_panel(isos, max(Y0, y - 10), y).dropna(subset=["democracy_index"])
     if d.empty or not (d["year"] == y).any():
         return None
     focus = set(follow)
     visible = d[d["iso3"].isin(focus) | (d["year"] == y)]
     ax = scatter_axis(visible, period_panel(isos, a, b).dropna(subset=["democracy_index"]), full)
-    d["x"] = np.where(d["arms_10"] > 0, d["arms_10"], ax["none_x"])
-    d["hover"] = hover_text(d)
-    fig = go.Figure()
-    for iso in isos:
-        if iso in focus:
-            conflict_wraps(fig, d[d["iso3"] == iso])
-    for iso in isos:
-        if iso not in focus:
-            continue
-        t = d[d["iso3"] == iso].sort_values("year")  # the line runs into the bubble
-        fig.add_trace(go.Scatter(x=t["x"], y=t["democracy_index"], mode="lines+markers", opacity=.8, text=t["hover"], hoverinfo="text",
-                                 customdata=np.column_stack([t["year"], t["iso3"]]),
-                                 line=dict(color=COL[iso], width=2, dash=DASH[iso]), marker=trail_marker(t, COL[iso])))
-    now = d[d["year"] == y].copy()
-    now["op"] = np.where(now["iso3"].isin(focus), 1.0, .2)
-    now = now.sort_values("op")
-    fig.add_trace(go.Scatter(x=now["x"], y=now["democracy_index"], mode="markers", hovertext=now["hover"], hoverinfo="text",
-                             customdata=np.column_stack([now["year"], now["iso3"]]),
-                             marker=dict(size=16, color=now["iso3"].map(COL), opacity=now["op"],
-                                         line=dict(color="#111110", width=ring(now["max_intensity"], 0) * 1.3))))
-    scatter_frame(fig, ax, 440)
+    d = sc_prep(d, ax)
+    x, yy = sc_axes(ax)
+    colour = alt.Color("iso3:N", scale=alt.Scale(domain=list(isos), range=[COL[i] for i in isos]), legend=None)
+    dash = alt.StrokeDash("dash:N", scale=alt.Scale(domain=["solid", "dot"], range=[[1, 0], [2, 3]]), legend=None)
+    d["dash"] = d["iso3"].map(DASH)
+    trail = d[d["iso3"].isin(focus)].sort_values(["iso3", "year"])
+    now = d[d["year"] == y]
+    # one layer for every clickable point (trail dots, then faint bubbles, then followed bubbles on top), so the
+    # click selection lives on a single layer
+    pts = pd.concat([
+        trail[trail["year"] < y].assign(size=lambda f: f["intensity"].map(SIZE), ring=lambda f: f["intensity"].map(RING), op=.8, z=0),
+        now.assign(size=250, ring=lambda f: f["intensity"].map(RING) * 1.3, op=np.where(now["iso3"].isin(focus), 1.0, .2),
+                   z=np.where(now["iso3"].isin(focus), 2, 1)),
+    ]).sort_values(["z", "iso3", "year"])
     lab = now[now["iso3"].isin(focus)].assign(label=lambda f: f["country_name"].map(short_name))
-    place_labels(fig, lab, now[now["iso3"].isin(focus)], ax)  # faint bubbles may sit under a label
-    return fig
+    sides = label_sides(lab, ax)
+    lab = lab.assign(side=lab["iso3"].map(sides)).dropna(subset=["side"])
+    layers = sc_strip(ax) + sc_wraps(trail, x, yy) + [
+        alt.Chart(trail).mark_line(strokeWidth=2, opacity=.8).encode(x, yy, colour, dash, detail="iso3:N", order="year:Q"),
+        alt.Chart(pts).mark_point(filled=True, stroke="#111110", cursor="pointer")
+        .encode(x, yy, colour, size=alt.Size("size:Q", scale=None), strokeWidth=alt.StrokeWidth("ring:Q", scale=None),
+                opacity=alt.Opacity("op:Q", scale=None), order="z:Q", tooltip=TT)
+        .add_params(PICK),
+        alt.Chart(lab[lab["side"] == "right"]).mark_text(align="left", dx=12, color=INK, fontSize=12).encode(x, yy, text="label:N"),
+        alt.Chart(lab[lab["side"] == "left"]).mark_text(align="right", dx=-12, color=INK, fontSize=12).encode(x, yy, text="label:N"),
+    ]
+    return sc_finish(layers), ax["any_zero"]
 
 
 # ------------------------------------------------------------------ timelines
@@ -847,7 +874,7 @@ def body():
                           "instead of fitting the axes to the points on screen. The axes then stay put while playing.")
         if single:
             st.caption(f"The path of {names[0]} through time. Thin line: the whole period; strong part: the last 10 years.")
-            fig = scatter_single(sel[0], a, b, y, full)
+            sc = scatter_single(sel[0], a, b, y, full)
             follow = ()
         else:
             if ss.get("cc_follow_for") != isos:  # a new list: follow everyone up to 8, else the 6 largest importers
@@ -858,19 +885,19 @@ def body():
                                           placeholder="Pick countries to show their trails and labels",
                                           help="Followed countries get a 10-year trail and a label here, and stand out in the "
                                                "democracy and supplier charts. Clicking a faint bubble follows it too."))
-            fig = scatter_compare(isos, a, b, y, follow, full)
-        if fig is None:
+            sc = scatter_compare(isos, a, b, y, follow, full)
+        if sc is None:
             st.info(f"No V-Dem data in {y} for {'this country' if single else 'these countries'}. Move the year or pick another period.",
                     icon=":material/info:")
         else:
-            st.plotly_chart(fig, key="cc_scatter", config=NO_BAR, on_select=scatter_clicked, selection_mode="points")
+            st.altair_chart(sc[0], key="cc_scatter", on_select=scatter_clicked, selection_mode="pick", width="stretch")
             if not single:
                 have = set(now.index[now["democracy_index"].notna()])
                 muted_list(f"Not in the scatter, no data for {y}", [i for i in isos if i not in have])
         st.caption(SC_GUIDE + ("" if single else " Trails: the previous 10 years of the followed countries; the others are faint.")
                    + " Big ringed dot: war year; small ringed dot: minor conflict; pale band: several conflict years in a row "
                    "(solid: war, dotted: minor). Click a dot to jump to its year."
-                   + (" Left strip: no arms received." if fig is not None and fig.layout.shapes else ""))
+                   + (" Left strip: no arms received." if sc is not None and sc[1] else ""))
     with right, st.container(border=True, height="stretch"):
         if single:
             st.markdown("**Democracy, conflict and arms on one axis**")

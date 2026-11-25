@@ -86,7 +86,7 @@ TERMS = [
     ("Arms before onset (arms_z)", "Arms transfers",
      "Mean arms imports in the 5 years before a conflict onset, standardised (mean 0, standard deviation 1).",
      "Project definition (notebook 08)",
-     "It enters the main regression as a continuous number, so there is no cut-off between \"high\" and \"low\" importers."),
+     "It enters the main regression as one continuous number for every onset."),
     ("Supplier democracy", "Arms transfers",
      "How democratic a country's arms suppliers were in a year, weighted by TIV: 0 = autocracies, 1 = democracies.",
      "Project definition (notebook 08)",
@@ -114,8 +114,8 @@ TERMS = [
      "One row per country and year, 1950 to 2025, joining V-Dem, UCDP and SIPRI on one country code.",
      "Notebook 05", "V-Dem decides which country exists in which year."),
     ("Placeholder numbers", "Methods",
-     "Random preview numbers on the Findings page until the regressions of notebook 08 are finished.", "Project",
-     "A warning marks them; the page switches to the real results automatically."),
+     "Preview numbers on the Findings page for the parts of notebook 08 that are not finished yet.", "Project",
+     "A warning names those parts; the page switches to the real results automatically."),
 
     # ---------------------------------------------------------------- map and data
     ("Equal Earth projection", "Map and data",
@@ -211,7 +211,7 @@ FAQ = [
 
     # ---------------------------------------------------------------- what results mean
     ("limits", "What is the main finding based on?",
-     "A regression, not a split into high and low arms importers.",
+     "A regression on all 281 conflict onsets, with arms imports as one continuous number.",
      ["For 1 to 10 years after a conflict onset, it compares the change in the democracy index with countries "
       "without an onset (country and year fixed effects).",
       "Arms imports in the 5 years before the onset enter as a standardised number (arms_z), so no border is set.",
@@ -223,10 +223,10 @@ FAQ = [
       "For example, a government at war buys weapons and also restricts freedoms.",
       "So any pattern is an association, not proof of a cause."],
      ["findings"], ["Correlation vs causation"]),
-    ("limits", "Why do the Findings show placeholder numbers?",
-     "The regressions in notebook 08 are not finished yet.",
-     ["Until they are, random preview numbers show how the results will look.",
-      "A warning at the top of the Findings page says so."],
+    ("limits", "Why do the Findings still show some placeholder numbers?",
+     "Notebook 08 is not finished yet: Part A (the main finding and the event study) is done, the later parts are not.",
+     ["For the parts that are missing, preview numbers show how the results will look.",
+      "A warning at the top of the Findings page names those parts."],
      ["findings"], ["Placeholder numbers"]),
 ]
 
@@ -355,11 +355,12 @@ with t_about:
             st.markdown("This page is a working prototype of the Streamlit app. The figures come from a test run of the project "
                         "notebooks on the real downloads. Before quoting any number, check it against your own notebook results.")
             if nr.any_placeholder():
-                st.caption(":material/science: The Findings page currently shows placeholder regression numbers.")
+                st.caption(":material/science: Some results on the Findings page are still placeholders (the parts of "
+                           "notebook 08 that are not finished).")
         with st.container(border=True):
             st.subheader("Main finding", anchor=False)
             st.markdown(
-                "- The main finding is a regression (notebook 08, model A1), with no cut-off between high and low importers.\n"
+                "- The main finding is a regression (notebook 08, model A1) on all conflict onsets; arms imports enter it as one continuous, standardised number.\n"
                 "- Onset: a year with an active conflict after two years without one.\n"
                 "- Arms before onset (**arms_z**): mean arms imports (TIV) in the five years before onset, standardised "
                 "(mean 0, standard deviation 1).\n"
@@ -370,8 +371,8 @@ with t_about:
                 "change differs per standard deviation more arms imports before the onset.\n"
                 "- Conflict, arms imports and regime change influence each other, so the results are associations, not causes.")
             st.markdown("The **Findings** page shows these results for every k, together with an event study of the democracy "
-                        "index from 10 years before to 10 years after a conflict starts. Until the notebook is done, that page "
-                        "shows placeholder numbers and says so.")
+                        "index from 10 years before to 10 years after a conflict starts. Parts of notebook 08 that are not done yet "
+                        "show placeholder numbers there, marked as such.")
             try:
                 st.page_link("native_pages/findings.py", label="See the regression results", icon=":material/arrow_forward:")
             except StreamlitAPIException:  # page run on its own, outside native_app.py's navigation

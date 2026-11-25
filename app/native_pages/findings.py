@@ -20,6 +20,7 @@ SURFACE = "#1a1a19"  # card background: the open reference point and the dot out
 es, es_src = nr.load("reg_eventstudy")
 res, res_src = nr.load("reg_results")
 sup, sup_src = nr.load("reg_suppliers")
+N_ONSETS = nr.n_onsets() or "the"  # 281 conflict onsets in notebook 08
 
 
 # ------------------------------------------------------------------ helpers
@@ -87,8 +88,12 @@ def ci_txt(a, b, d=3):
 
 
 # ------------------------------------------------------------------ header
-if nr.any_placeholder():
-    st.warning(nr.PLACEHOLDER_TEXT, title="Preview with placeholder numbers", icon=":material/science:")
+# only the parts that still use the placeholder numbers of data/demo/ are named
+_demo = [name for name, src in [("the main finding", res_src), ("the event study", es_src),
+                                ("who supplied the arms", sup_src)] if src == "demo"]
+if _demo:
+    st.warning("Placeholder numbers in " + ", ".join(_demo) + ": notebook 08 has not produced these results yet. The page "
+               "switches to the real numbers as soon as they exist.", title="Partly a preview", icon=":material/science:")
 st.markdown(":primary[:small[**FINDINGS**]]")
 st.title("What the regressions show", anchor=False)
 st.markdown("Does democracy change after an armed conflict starts, and is the change different for countries that import "
@@ -104,7 +109,7 @@ with st.container(border=True):
     st.caption("Regression A1 of notebook 08, one for each horizon k = 1 to 10 years: the change in the democracy index from "
                "the year before a conflict starts to k years after it, explained by the onset and by onset × arms imports. "
                "Arms imports are the average of the 5 years before onset, standardised (mean 0, sd 1), so they enter as a "
-               "number: there is no cut-off between \"high\" and \"low\" importers. Country and year fixed effects, standard "
+               "number for every country. Country and year fixed effects, standard "
                "errors clustered by country.")
     if main.empty:
         st.info("Not available yet: the A1 models of notebook 08 have not been run.", icon=":material/hourglass_empty:")
@@ -118,6 +123,15 @@ with st.container(border=True):
                    "country importing one standard deviation more (b1 + b2)"
                    + ("." if main["sum_lo"].notna().any() else "; its band needs the term onset+onset:arms_z from notebook 08.")
                    + " Hover a year for the numbers.")
+        if res_src == "real":
+            st.markdown("**What it means** :gray[(interpretation in notebook 08, Part A)]")
+            st.markdown(f"In the years after a conflict onset, the democracy index of a country with average arms imports is "
+                        f"slightly lower than in other countries in the same year, by about 0.005 to 0.011 points on the 0 to 1 "
+                        f"scale. For countries that imported one standard deviation more arms in the five years before the "
+                        f"onset, the estimate is slightly positive in the first five years (about +0.001 to +0.011), but from "
+                        f"about k = 7 the two lines are almost identical. All 95% confidence intervals include zero at every "
+                        f"horizon, so neither estimate can be told apart from zero: with {N_ONSETS} onsets and a democracy "
+                        f"index that changes slowly, the data are not precise enough to show a clear difference.")
 
 
 # ------------------------------------------------------------------ (a) event study
@@ -196,9 +210,11 @@ with st.container(border=True):
         st.subheader("Democracy before and after a conflict starts", anchor=False, width="content")
         if es_src == "demo":
             st.badge("Placeholder", icon=":material/science:", color="orange")
-    st.caption("Event study: change in the democracy index (0 to 1) compared with the year before a conflict starts, with "
-               "country and year fixed effects. Below the dashed line = less democratic than just before the conflict. "
-               "How arms imports change this is in the main finding above (a regression, not a split into groups).")
+    st.caption("Stacked event study (A3 of notebook 08): each conflict onset is compared with clean control countries "
+               "that had no conflict in the same 21 years, with stack-by-country and stack-by-year fixed effects and "
+               "standard errors clustered by country. The line is the democracy index (0 to 1) of the onset countries "
+               "relative to the controls and to the year before the onset. Below the dashed line = less democratic. "
+               "How arms imports change this is in the main finding above.")
     if not ok:
         st.info("Not available yet: the event study of notebook 08 has not been run.", icon=":material/hourglass_empty:")
     else:
@@ -213,6 +229,14 @@ with st.container(border=True):
                             alt="Event study: change in the democracy index from 10 years before to 10 years after conflict onset")
         with st.expander("Show the numbers"):
             st.dataframe(es_table(), hide_index=True)
+        if es_src == "real":
+            st.markdown("**What it means** :gray[(interpretation in notebook 08, Part A)]")
+            st.markdown("Before the onset, the democracy index of onset countries moves in parallel with the clean controls "
+                        "(all ten leads between −0.006 and +0.004, intervals including zero), so there is no sign of a "
+                        "pre-trend. After the onset it falls behind the controls: by about 0.013 after 4 to 5 years and "
+                        "about 0.018 to 0.025 after 6 to 9 years, where the 95% intervals no longer include zero. This fits "
+                        "conflict onsets being followed by a small, slow decline in democracy, but other shocks around the "
+                        "onset could explain part of it.")
 
 
 # ------------------------------------------------------------------ (b) A1 models over k
@@ -381,7 +405,8 @@ with left.container(border=True, height="stretch"):
             st.altair_chart(forest(rows), key=f"fd_forest_{title}", width="stretch",
                             alt=f"Forest plot of {title}: coefficients with 95% confidence intervals")
         if not shown:
-            st.info("No results for the B, C or D models yet.", icon=":material/hourglass_empty:")
+            st.info("Not done yet: the splits (Part B), who supplied the arms (Part C) and what predicts a conflict "
+                    "(Part D) of notebook 08.", icon=":material/hourglass_empty:")
         known = allr["model"].str.match(r"^A1_k\d+$")
         for pattern, _, _ in nr.FOREST:
             known |= allr["model"].str.contains(pattern)

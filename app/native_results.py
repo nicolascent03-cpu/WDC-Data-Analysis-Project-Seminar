@@ -47,8 +47,8 @@ FOREST = [
      "Change in the probability that a conflict starts next year (linear probability model)."),
 ]
 
-ES_NAME = {"all": "All onsets", "high importer": "High arms importers", "low importer": "Low arms importers"}
-ES_COL = {"all": ACCENT, "high importer": HI, "low importer": LO}
+ES_NAME = {"all": "All onsets"}  # the event study is shown for all onsets only
+ES_COL = {"all": ACCENT}
 
 
 def _mtime(name):
@@ -77,13 +77,6 @@ def any_placeholder():
 def load_panel():
     return pd.read_csv(CLEAN / "panel.csv", usecols=["country_name", "iso3", "year", "regime_type", "regime_label",
                                                      "democracy_index", "conflict_active", "arms_imports_tiv"])
-
-
-@st.cache_data
-def load_finding():
-    """The simple high vs low importer comparison of the original prototype (D.finding in data.json)."""
-    with open(SITE_DATA, encoding="utf8") as f:
-        return json.load(f)["finding"]
 
 
 def event_rows(es, group):
@@ -154,10 +147,10 @@ def band_traces(x, lo, hi, mid, colour, name, hover, opacity=.16):
 
 
 # ------------------------------------------------------------------ the main finding: regression A1
-# The main finding is the A1 regression of notebook 08, not a split of the countries into high and low importers:
+# The main finding is the A1 regression of notebook 08:
 #   y_k = democracy(t + k) - democracy(t - 1) ~ onset + onset:arms_z + arms_z + country and year fixed effects,
 # for k = 1 ... 10. arms_z is the mean arms import of the 5 years before onset, standardised (mean 0, sd 1), so arms
-# imports enter as a continuous number and no cut-off between "high" and "low" importers is needed.
+# imports enter as one continuous number.
 #   b1 = onset:            the change after an onset for a country with average arms imports
 #   b2 = onset:arms_z:     how much that change differs per standard deviation more arms imports
 #   b1 + b2:               the change for a country importing one sd more arms than average
@@ -207,8 +200,8 @@ def a1_sentence(d, k=5):
          f"changed by **{sgn(r['b1'])}** (95% CI {_ci(r['b1_lo'], r['b1_hi'])}"
          f"{'' if _clear(r['b1_lo'], r['b1_hi']) else ', not clearly different from zero'}).")
     if not pd.isna(r["b2"]):
-        s += (f" Per standard deviation more arms imported in the 5 years before, the change is **{sgn(r['b2'])}** "
-              f"different (95% CI {_ci(r['b2_lo'], r['b2_hi'])}"
+        s += (f" For each standard deviation more arms imported in the 5 years before, the change differs by "
+              f"**{sgn(r['b2'])}** (95% CI {_ci(r['b2_lo'], r['b2_hi'])}"
               f"{': a clear difference' if _clear(r['b2_lo'], r['b2_hi']) else ', not clearly different from zero'}), "
               f"so **{sgn(r['sum'])}** in total for such a country.")
     return s
@@ -267,3 +260,13 @@ def a1_legend():
     """The legend of a1_chart as a one-line Markdown text (the chart itself draws none)."""
     items = [(f"{A1_AVG} (b1)", ACCENT, "━"), (f"{A1_MORE} (b1 + b2)", HI, "╍"), ("Band: 95% confidence interval", "#5a5955", "■")]
     return ":small[" + " ".join(f':color[{sym}]{{foreground="{c}"}} {n.replace(" ", chr(160))}' for n, c, sym in items) + "]"
+
+
+@st.cache_data
+def n_onsets():
+    """Number of conflict onsets in notebook 08's analysis panel (reg_panel.csv): conflict years after two years
+    without conflict. None when the file does not exist."""
+    path = CLEAN / "reg_panel.csv"
+    if not path.exists():
+        return None
+    return int(pd.read_csv(path, usecols=["onset"])["onset"].sum())

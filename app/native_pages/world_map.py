@@ -2,10 +2,13 @@
 
 Same content as the World map page of app/site/adc.html. Charts: the regimes map with striped conflicts and the chord
 ring are the two custom components of app/native_components/; the arms-flows map is pydeck; the build-up map, the
-side bars and the rivers of time are Plotly. Controls live in the sidebar; Play advances the year for the whole map
-card (map, side panel, river and numbers together) by re-running one fragment.
+regime bars and the rivers of time are keyed Altair charts, which keep their element across years (Vega redraws them
+in place, so Play does not flicker). Controls live in the sidebar; Play advances the year for the whole map card (map,
+side panel, river and numbers together) by re-running one fragment; the main finding and the data sources below are
+outside it.
 """
 
+import altair as alt
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
@@ -158,37 +161,87 @@ def legend_strip(items, per_row=4):
     return fig
 
 
+NO_REG = "#5b5850"
+BLD_DOMAIN = REG_LABELS + ["No regime data"]
+
+
+def alt_finish(chart, height):
+    """The look of the Altair charts of this page (as the scatter of Countries & compare): transparent, IBM Plex, no frame."""
+    return (chart.properties(height=height).configure_view(stroke=None)
+            .configure(background="transparent", font=FONT + ", sans-serif")
+            .configure_axis(labelColor=MUTED, titleColor=MUTED, titleFontWeight="normal", labelFontSize=11, titleFontSize=11,
+                            domainColor=LINE, tickColor=LINE, gridColor=LINE)
+            .configure_legend(labelColor=INK2, labelFontSize=12, titleColor=MUTED))
+
+
 @st.cache_data
-def buildup_map(y):
+def land_shapes():
+    """Our country shapes for Vega (lon/lat, about 0.1° precision, rings wound clockwise as d3-geo expects)."""
+    feats = []
+    for ft in nd.country_geojson()["features"]:
+        polys = []
+        for poly in ft["geometry"]["coordinates"]:
+            r = np.round(np.array(poly[0]), 1)
+            r = r[np.r_[True, np.any(np.diff(r, axis=0) != 0, axis=1)]]
+            if len(r) < 4:
+                continue
+            x, yy = r[:, 0], r[:, 1]
+            if (x * np.roll(yy, -1) - np.roll(x, -1) * yy).sum() > 0:
+                r = r[::-1]
+            polys.append([r.tolist()])
+        if polys:
+            feats.append({"type": "Feature", "properties": {"iso3": ft["properties"]["iso3"]},
+                          "geometry": {"type": "MultiPolygon", "coordinates": polys}})
+    return feats
+
+
+@st.cache_data
+def buildup_points(y):
     roll = nd.arms_rolling_hosted()
     v = roll.loc[y]
     reg = nd.regime_grid().loc[y]
     imp = panel[panel["year"] == y].set_index("iso3")["arms_imports_tiv"]
     p = pd.DataFrame({"v": v[v > 0]}).join(points, how="inner")
-    p["r"] = reg.reindex(p.index)
+    r = reg.reindex(p.index)
     vmax = float(roll.values.max())
-    p["size"] = 3 + 62 * np.sqrt(p["v"] / vmax)
-    p["name"] = [NAMES.get(i, i) for i in p.index]
-    p["tip"] = [f"<b>{n} · 10 years to {y}</b><br>{fmt(val)} TIV of major arms received<br>Arms imports in {y}: "
-                f"{fmt(imp.get(i, 0) or 0)} TIV<br>" + (REG_LABELS[int(r)] if pd.notna(r) else f"No V-Dem data for {y}")
-                for i, n, val, r in zip(p.index, p["name"], p["v"], p["r"])]
-    p = p.sort_values("v", ascending=False)
-    labelled = set(p.index[(p["size"] > 26)][:14])
-    fig = go.Figure()
-    groups = [(REG_LABELS[k], REG_COLS[k], p["r"] == k) for k in range(4)] + [("No regime data", "#5b5850", p["r"].isna())]
-    for name, col, m in groups:
-        g = p[m]
-        fig.add_trace(go.Scattergeo(
-            lon=g["lon"], lat=g["lat"], mode="markers+text", name=name, customdata=g.index, text=[i if i in labelled else "" for i in g.index],
-            textfont=dict(color="#111110", size=10, family=FONT), hovertext=g["tip"], hoverinfo="text",
-            marker=dict(size=g["size"], color=col, opacity=.9, line=dict(width=0.8, color="#151514"))))
-    fig.update_geos(projection_type="equal earth", showframe=False, showcoastlines=False, showcountries=True, countrycolor="#151514",
-                    showland=True, landcolor=NODATA, showocean=False, bgcolor=BG, lataxis_range=[-58, 85])
-    fig.update_layout(height=MAP_H + 20, margin=dict(l=0, r=0, t=0, b=0), paper_bgcolor=BG, dragmode=False, clickmode="event",
-                      hoverlabel=dict(bgcolor=INK, font_color="#111110", font_family=FONT),
-                      legend=dict(orientation="h", x=0, y=-0.02, yanchor="top", itemclick=False, itemdoubleclick=False,
-                                  font=dict(color=INK2, family=FONT, size=12), itemsizing="constant"))
-    return fig
+    d = 3 + 62 * np.sqrt(p["v"] / vmax)       # diameter in px, as the Plotly version
+    p["area"] = d ** 2 * np.pi / 4 * 0.8
+    p["iso3"] = p.index
+    p["Country"] = [NAMES.get(i, i) for i in p.index]
+    p["Regime"] = [REG_LABELS[int(k)] if pd.notna(k) else "No regime data" for k in r]
+    p["regime_tip"] = [REG_LABELS[int(k)] if pd.notna(k) else f"No V-Dem data for {y}" for k in r]
+    p["imp"] = [float(imp.get(i, 0) or 0) for i in p.index]
+    p = p.sort_values("v", ascending=False).reset_index(drop=True)
+    p["label"] = np.where((d.reindex(p["iso3"]).values > 26) & (np.arange(len(p)) < 14), p["iso3"], "")
+    return p
+
+
+# "n" counts the changes of the country card, so a click on the same bubble after the card changed is a new selection
+BUBBLE = alt.selection_point(name="bubble", fields=["iso3", "n"], on="click", empty=False)
+BUBBLE_LABEL = alt.selection_point(name="bubble_label", fields=["iso3", "n"], on="click", empty=False)  # a click on a label
+
+
+def buildup_map(y):
+    """Bubble map of Arms build-up: area = major arms received in the 10 years to `y`, colour = regime type."""
+    p = buildup_points(y).assign(n=ss.get("_wm_card_n", 0))
+    proj = "equalEarth"
+    land = (alt.Chart(alt.Data(values=land_shapes())).mark_geoshape(fill=NODATA, stroke="#151514", strokeWidth=0.5)
+            .project(proj))
+    colour = alt.Color("Regime:N", scale=alt.Scale(domain=BLD_DOMAIN, range=REG_COLS + [NO_REG]),
+                       legend=alt.Legend(title=None, orient="bottom", direction="horizontal", symbolType="circle",
+                                         symbolSize=110, symbolOpacity=.9, labelColor=INK2, columnPadding=14))
+    tip = [alt.Tooltip("Country:N", title=f"10 years to {y}"),
+           alt.Tooltip("v:Q", title="TIV of major arms received", format=",.0f"),
+           alt.Tooltip("imp:Q", title=f"Arms imports in {y} (TIV)", format=",.0f"),
+           alt.Tooltip("regime_tip:N", title="Regime")]
+    bubbles = (alt.Chart(p).mark_circle(opacity=.9, stroke="#151514", strokeWidth=0.8, cursor="pointer")
+               .encode(longitude="lon:Q", latitude="lat:Q", size=alt.Size("area:Q", scale=None), color=colour,
+                       order=alt.Order("v:Q", sort="descending"), tooltip=tip)
+               .add_params(BUBBLE).project(proj))
+    labels = (alt.Chart(p[p["label"] != ""]).mark_text(color="#111110", fontSize=10, fontWeight=500, cursor="pointer")
+              .encode(longitude="lon:Q", latitude="lat:Q", text="label:N", tooltip=tip)
+              .add_params(BUBBLE_LABEL).project(proj))
+    return alt_finish(alt.layer(land, bubbles, labels), MAP_H + 20)
 
 
 def hex_rgb(h, a=200):
@@ -297,25 +350,23 @@ def regime_bars(y):
     """Side panel of Regimes: one bar per regime type (liberal democracy on top), on one scale for all years."""
     rc = regime_counts()
     row, vmax = rc.loc[y], float(rc.values.max())
-    fig = go.Figure()
-    order = [3, 2, 1, 0]
-    ys = list(range(len(order)))
-    fig.add_trace(go.Bar(x=[vmax] * 4, y=ys, orientation="h", marker=dict(color="rgba(44,44,42,.6)", cornerradius=3),
-                         hoverinfo="skip", width=0.34))
     tot = row.sum()
-    fig.add_trace(go.Bar(x=[row.get(r, 0) for r in order], y=ys, orientation="h", width=0.34,
-                         marker=dict(color=[REG_COLS[r] for r in order], cornerradius=3),
-                         customdata=[[REG_LABELS[r], pct(row.get(r, 0), tot)] for r in order],
-                         hovertemplate="%{customdata[0]} · " + str(y) + "<br>%{x} of " + str(int(tot)) + " countries (%{customdata[1]})<extra></extra>"))
-    for k, r in enumerate(order):
-        fig.add_annotation(x=0, y=k, yshift=17, xshift=2, xanchor="left", text=REG_LABELS[r], showarrow=False, font=dict(color=INK2, size=12))
-        fig.add_annotation(x=vmax, y=k, yshift=17, xanchor="right", text=f"<b>{int(row.get(r, 0))}</b>", showarrow=False,
-                           font=dict(color=INK, size=13))
-    fig.update_layout(height=210, margin=dict(l=2, r=2, t=12, b=0), paper_bgcolor=BG, plot_bgcolor=BG, barmode="overlay",
-                      showlegend=False, font=dict(family=FONT), xaxis=dict(visible=False, range=[0, vmax], fixedrange=True),
-                      yaxis=dict(visible=False, autorange="reversed", fixedrange=True),
-                      hoverlabel=dict(bgcolor=INK, font_color="#111110", font_family=FONT))
-    return fig
+    d = pd.DataFrame({"k": range(4), "Regime": [REG_LABELS[r] for r in (3, 2, 1, 0)],
+                      "n": [int(row.get(r, 0)) for r in (3, 2, 1, 0)], "vmax": vmax})
+    d["tip"] = [f"{n} of {int(tot)} countries ({pct(n, tot)})" for n in d["n"]]
+    yk = alt.Y("k:O", axis=None, scale=alt.Scale(paddingInner=0, paddingOuter=0))
+    x = alt.X("n:Q", axis=None, scale=alt.Scale(domain=[0, vmax], nice=False, zero=True))
+    track = alt.Chart(d).mark_bar(size=16, cornerRadius=3, color=LINE, opacity=.6).encode(x=alt.X("vmax:Q", axis=None,
+                                                                                          scale=alt.Scale(domain=[0, vmax])), y=yk)
+    bars = (alt.Chart(d).mark_bar(size=16, cornerRadius=3)
+            .encode(x=x, y=yk, color=alt.Color("Regime:N", scale=alt.Scale(domain=[REG_LABELS[r] for r in (3, 2, 1, 0)],
+                                                                          range=[REG_COLS[r] for r in (3, 2, 1, 0)]), legend=None),
+                    tooltip=[alt.Tooltip("Regime:N"), alt.Tooltip("tip:N", title=f"Countries in {y}")]))
+    names = alt.Chart(d).mark_text(align="left", baseline="bottom", dy=-11, dx=2, color=INK2, fontSize=12).encode(
+        x=alt.value(0), y=yk, text="Regime:N")
+    counts = alt.Chart(d).mark_text(align="right", baseline="bottom", dy=-11, color=INK, fontSize=13, fontWeight=600).encode(
+        x=alt.value("width"), y=yk, text="n:Q")
+    return alt_finish(alt.layer(track, bars, names, counts), 200)
 
 
 @st.cache_data
@@ -325,44 +376,75 @@ def supplier_river():
     return t.pivot_table(index="year", columns="group", values="tiv", aggfunc="sum").reindex(range(Y0, Y1 + 1)).fillna(0)
 
 
+# "cur" is the year shown, so a click on the year picked before (and since left by Play) is a new selection
+YEAR_PICK = alt.selection_point(name="year_pick", fields=["year", "cur"], on="click", empty=False, clear=False)
+YEAR_HOVER = alt.selection_point(name="year_hover", fields=["year"], on="pointerover", clear="pointerout", empty=False)
+
+
+@st.cache_data
+def river_data(series, unit):
+    """Long table of a river (one row per series and year, first series at the bottom) and the hover tooltip per year."""
+    years = list(range(Y0, Y1 + 1))
+    vals = pd.DataFrame({name: s.reindex(years).fillna(0) for name, s in series.items()}, index=years)
+    tot = vals.sum(axis=1)
+    shares = (vals.div(tot.replace(0, np.nan), axis=0) * 100).fillna(0)
+    long = vals.stack().rename("value").reset_index()
+    long.columns = ["year", "series", "value"]
+    long["share"] = shares.stack().values
+    long["k"] = long["series"].map({n: k for k, n in enumerate(series)})
+    tips = pd.DataFrame({"year": years, "x0": [v - .5 for v in years], "x1": [v + .5 for v in years]})
+    for k, name in enumerate(series):
+        tips[f"s{k}"] = [f"{v:,.0f} {unit} ({sh:.0f}%)" for v, sh in zip(vals[name], shares[name])]
+    return long, tips
+
+
 def river(series, colours, y, unit, label, share=False, key=None, height=155):
     """Stacked river of time, 1950 to 2025, with the year marked. A click sets the year."""
-    years = list(range(Y0, Y1 + 1))
-    tot = sum(s.reindex(years).fillna(0) for s in series.values())
-    fig = go.Figure()
-    for (name, s), col in zip(series.items(), colours):
-        v = s.reindex(years).fillna(0)
-        sh = (v / tot.replace(0, np.nan) * 100).fillna(0)
-        fig.add_trace(go.Scatter(
-            x=years, y=sh if share else v, name=name, stackgroup="one", mode="lines+markers", line=dict(width=0.5, color=col),
-            # invisible markers: only points with a marker can be selected, so a click picks the year
-            marker=dict(size=6, opacity=0), selected=dict(marker=dict(opacity=0)), unselected=dict(marker=dict(opacity=0)),
-            fillcolor=nr.rgba(col, .88), customdata=np.c_[v, sh],
-            hovertemplate=f"{name}: %{{customdata[0]:,.0f}} {unit} (%{{customdata[1]:.0f}}%)<extra></extra>"))
-    fig.add_vline(x=1991, line=dict(color=MUTED, dash="dot", width=1))
-    if abs(y - 1991) > 16:  # the year label takes its place when they are close
-        fig.add_annotation(x=1991, y=1, yref="paper", text="Soviet Union ends (1991)", showarrow=False, yanchor="bottom",
-                           font=dict(color=MUTED, size=11))
-    fig.add_vline(x=y, line=dict(color=INK, width=2))
-    anchor = "left" if y < Y0 + 12 else "right" if y > Y1 - 12 else "center"
-    fig.add_annotation(x=y, y=1, yref="paper", yanchor="bottom", xanchor=anchor, text=f"<b>{label}</b>", showarrow=False,
-                       font=dict(color=INK, size=12, family="IBM Plex Mono"))
-    fig.update_layout(height=height, margin=dict(l=4, r=8, t=22, b=4), paper_bgcolor=BG, plot_bgcolor=BG, showlegend=False,
-                      hovermode="x unified", dragmode=False, clickmode="event+select", font=dict(family=FONT, color=MUTED, size=11),
-                      hoverlabel=dict(bgcolor=INK, font_color="#111110", font_family=FONT))
-    fig.update_xaxes(range=[Y0, Y1], dtick=10, showgrid=False, linecolor=LINE, tickfont=dict(color=MUTED), fixedrange=True,
-                     hoverformat="d")
-    fig.update_yaxes(title=dict(text="% of world" if share else unit, font=dict(color=MUTED, size=11)), gridcolor=LINE,
-                     zeroline=False, tickfont=dict(color=MUTED), fixedrange=True, nticks=4, range=[0, 100] if share else None,
-                     ticksuffix="%" if share else "", automargin=True)
+    long, tips = river_data(series, unit)
+    tips = tips.assign(cur=y)
+    names = list(series)
+    ph = height - 26  # plot height; the padding above holds the headline
+    x = alt.X("year:Q", scale=alt.Scale(domain=[Y0, Y1], nice=False, zero=False),
+              axis=alt.Axis(values=list(range(1950, 2030, 10)), format="d", grid=False, title=None, labelColor=MUTED))
+    field = "share" if share else "value"
+    yax = alt.Axis(title="% of world" if share else unit, tickCount=4, grid=True, domain=False, ticks=False,
+                   labelExpr="datum.value + '%'" if share else "format(datum.value, '~s')")
+    yy = alt.Y(f"{field}:Q", stack="zero", axis=yax,
+               scale=alt.Scale(domain=[0, 100], nice=False) if share else alt.Scale(nice=True))
+    area = (alt.Chart(long).mark_area(opacity=.88, stroke=None, interpolate="linear")
+            .encode(x=x, y=yy, order=alt.Order("k:Q"), color=alt.Color("series:N", legend=None,
+                                                                         scale=alt.Scale(domain=names, range=list(colours)))))
+    # one invisible column per year: hover shows every series of that year, a click picks the year
+    cols = (alt.Chart(tips).mark_rect(color=INK, cursor="pointer", clip=True)
+            .encode(x="x0:Q", x2="x1:Q", y=alt.value(0), y2=alt.value(ph),
+                    opacity=alt.condition(YEAR_HOVER, alt.value(.07), alt.value(0.001)),
+                    tooltip=[alt.Tooltip("year:Q", title="Year", format="d")]
+                    + [alt.Tooltip(f"s{k}:N", title=n) for k, n in reversed(list(enumerate(names)))])
+            .add_params(YEAR_PICK, YEAR_HOVER))
+    marks = pd.DataFrame({"year": [1991, y], "kind": ["ussr", "now"]})
+    ussr = alt.Chart(marks[marks["kind"] == "ussr"]).mark_rule(color=MUTED, strokeDash=[2, 3], strokeWidth=1).encode(x="year:Q")
+    now = alt.Chart(marks[marks["kind"] == "now"]).mark_rule(color=INK, strokeWidth=2).encode(x="year:Q")
+    layers = [area, ussr, now, cols]
+    align = "left" if y < Y0 + 12 else "right" if y > Y1 - 12 else "center"
+    # the 1991 label only when the headline (about 0.6 years per character on a laptop-wide card) leaves room for it
+    w = .6 * len(label)
+    head = (y, y + w) if align == "left" else (y - w, y) if align == "right" else (y - w / 2, y + w / 2)
+    if head[1] < 1991 - 7 or head[0] > 1991 + 7:
+        layers.append(alt.Chart(marks[marks["kind"] == "ussr"]).mark_text(text="Soviet Union ends (1991)", color=MUTED, fontSize=11,
+                                                                           baseline="bottom", dy=-4)
+                      .encode(x="year:Q", y=alt.value(0)))
+    layers.append(alt.Chart(marks[marks["kind"] == "now"]).mark_text(text=label, color=INK, fontSize=12, font="IBM Plex Mono, ui-monospace, monospace",
+                                                                      fontWeight="bold", baseline="bottom", dy=-4, align=align)
+                  .encode(x="year:Q", y=alt.value(0)))
+    chart = alt_finish(alt.layer(*layers).properties(padding={"left": 4, "right": 8, "top": 22, "bottom": 4}), ph)
 
     def clicked():
-        pts = (ss[key].get("selection") or {}).get("points") or []
-        if pts:
-            set_year(round(pts[0]["x"]))
+        pts = ((ss[key].get("selection") or {}).get("year_pick")) or []
+        if pts and pts[0].get("year") is not None:
+            set_year(round(pts[0]["year"]))
 
-    st.plotly_chart(fig, key=key, on_select=clicked, selection_mode="points", config={"displayModeBar": False},
-                    alt=f"River of time, 1950 to 2025. Click a year to show it.")
+    st.altair_chart(chart, key=key, on_select=clicked, selection_mode="year_pick", width="stretch",
+                    alt="River of time, 1950 to 2025. Click a year to show it.")
 
 
 def side_header(title, note):
@@ -414,6 +496,7 @@ def country_card(iso, y):
 _UNSET = object()
 if ss.get("_wm_card_prev", _UNSET) != card_iso:
     ss["_wm_card_prev"] = card_iso
+    ss["_wm_card_n"] = ss.get("_wm_card_n", 0) + 1
     ss["wm_pin"] = f"r:{card_iso}" if card_iso else None
 
 
@@ -441,10 +524,12 @@ def flow_map_clicked():
 
 
 def bubble_clicked():
-    pts = (ss["bld_map"].get("selection") or {}).get("points") or []
-    if pts and pts[0].get("customdata"):
-        cd = pts[0]["customdata"]
-        pick_country(cd[0] if isinstance(cd, list) else cd)
+    sel = ss["bld_map"].get("selection") or {}
+    for name in ("bubble", "bubble_label"):
+        pts = sel.get(name) or []
+        if pts and pts[0].get("iso3"):
+            pick_country(pts[0]["iso3"])
+            return
 
 
 def buildup_row_clicked():
@@ -506,9 +591,9 @@ def map_card():
                          f"Top {len(drawn)} of {len(f):,} deliveries shown ({pct(drawn['tiv'].sum(), f['tiv'].sum())} of this year's TIV)",
                          color="gray")
             else:
-                st.plotly_chart(buildup_map(y), key="bld_map", on_select=bubble_clicked, selection_mode="points",
-                                config={"displayModeBar": False, "scrollZoom": False},
-                                alt=f"Bubble map of major arms received {y - 9} to {y}")
+                st.altair_chart(buildup_map(y), key="bld_map", on_select=bubble_clicked,
+                                selection_mode=["bubble", "bubble_label"], width="stretch",
+                                alt="Bubble map of major arms received in the previous 10 years")
         with right:
             with st.container(height=SIDE_H, border=False):
                 if mode == "Arms flows":
@@ -527,7 +612,8 @@ def map_card():
                 elif mode == "Regimes":
                     rc = regime_counts().loc[y]
                     side_header(f"Regimes in {y}", f"Number of countries ({int(rc.sum())} with data)")
-                    st.plotly_chart(regime_bars(y), key="reg_bars", config={"displayModeBar": False})
+                    st.altair_chart(regime_bars(y), key="reg_bars", width="stretch",
+                                    alt="Bars of the number of countries per regime type in the year")
                     a, b = st.columns(2)
                     a.metric("With armed conflict", int(g["conflict_active"].sum()), help="Countries with an active armed conflict (25+ battle deaths)")
                     b.metric("Of them at war", int((g["max_intensity"] == 2).sum()), help="1,000+ battle deaths in the year")

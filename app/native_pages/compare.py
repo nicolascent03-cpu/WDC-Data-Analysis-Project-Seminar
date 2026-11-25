@@ -4,25 +4,25 @@ One country or a group side by side: a snapshot of the chosen year, democracy vs
 scatter with 10-year trails, democracy, conflict and arms on one shared year axis, regime periods,
 the democracy index, armed conflicts by name, imports by supplier (every supplier SIPRI names), how
 democratic the suppliers were, the arms flows to and from these countries and the year-by-year
-numbers. Controls live in the sidebar; Play advances the year for the whole page.
+numbers. The countries are chosen in the sidebar; the year bar (Play, speed, year, period) sits at the top of the page,
+inside the page fragment, so Play and the slider only rerun the page body.
+
+Every chart that shows the year is an Altair (Vega-Lite) chart with the year as its own rule layer: when the year
+changes, Vega redraws the marks in place instead of Streamlit mounting a new chart (Plotly charts blank for a moment,
+which flickered on every Play step).
 """
 
 import json
-from datetime import datetime
 
 import altair as alt
 import numpy as np
 import pandas as pd
-import plotly.express as px
-import plotly.graph_objects as go
 import pydeck as pdk
 import streamlit as st
-from plotly.subplots import make_subplots
 
 import native_data as nd
 
 Y0, Y1 = 1950, 2025
-BG = "rgba(0,0,0,0)"
 INK, INK2, MUTED, LINE = "#f0efec", "#c3c2b7", "#959086", "#2c2c2a"
 FONT = "IBM Plex Sans"
 SPEEDS = {"0.5×": 2.4, "1×": 1.2, "2×": 0.6}  # seconds per year
@@ -32,7 +32,7 @@ CONFLICT_COLOURS = {"War": "#ece8e0", "Minor conflict": "#6a655d"}  # as in the 
 UCDP_TYPE = {1: "Extrasystemic", 2: "Interstate", 3: "Intrastate", 4: "Internationalised intrastate"}
 EXTRA_SUP = ["#2bb5c0", "#a3b54a", "#e07ab0", "#b98a68", "#a39d92", "#6f6a62"]  # suppliers without a fixed colour
 UNKNOWN = "unknown supplier(s)"
-NO_BAR = {"displayModeBar": False}
+ARMS = "#e48461"  # arms-import bars in the one-axis chart
 SC_GUIDE = ("Up = more democratic, right = more arms received (10-year total, log scale). "
             "Moving together is not proof that one drives the other.")
 ROWS_MAX = 24  # more countries than this: the per-country row charts show only the followed countries
@@ -49,6 +49,8 @@ GROUPS = {"All countries": ALL_ISO, **nd.country_groups()}
 ss = st.session_state
 ss.setdefault("year", 2000)
 ss.setdefault("playing", False)
+ss.setdefault("cc_period", "1950–2025")
+ss.setdefault("cc_speed", "1×")
 # The country list is bound to the URL, which holds the country names (?countries=Ethiopia&countries=Eritrea).
 # The URL wins when it names countries.
 if "countries" not in st.query_params:
@@ -86,6 +88,12 @@ def toggle_play():
     if ss["playing"] and ss["year"] >= p1:
         ss["year"] = p0
     ss["cc_year_slider"] = ss["year"]
+    ss["cc_full_rerun"] = True  # the Play timer of the page fragment is set on a full run
+
+
+def full_rerun():
+    """The speed sets the Play timer of the page fragment, which only a full run changes."""
+    ss["cc_full_rerun"] = True
 
 
 def countries_changed():
@@ -120,10 +128,11 @@ def scatter_clicked():
     p0, p1 = period_bounds()
     ss["year"] = min(max(int(year), p0), p1)
     ss["cc_year_slider"] = ss["year"]
-    ss["playing"] = False
+    if ss["playing"]:
+        ss["playing"] = False
+        ss["cc_full_rerun"] = True  # stops the Play timer, which only a full run changes
     if iso in NAMES and len(ss.get("countries") or []) > 1 and iso not in (ss.get("cc_follow") or []):
         ss["cc_follow"] = list(ss.get("cc_follow") or []) + [iso]
-    ss["cc_full_rerun"] = True  # the sidebar slider sits outside the page fragment
 
 
 # keep the slider on the page-wide year (it may have moved on another page) and inside the period
@@ -139,15 +148,10 @@ with st.sidebar:
     st.button("Clear comparison", icon=":material/close:", on_click=clear_comparison, width="stretch",
               disabled=len(ss.get("countries") or []) < 2, help="Keep only the first country.")
     st.divider()
-    st.segmented_control("Period", list(PERIODS), default="1950–2025", key="cc_period", on_change=clamp_year,
-                         width="stretch", required=True)
-    p0, p1 = period_bounds()
-    st.slider("Year", p0, p1, key="cc_year_slider", on_change=slider_moved, disabled=ss["playing"])
-    st.button("Pause" if ss["playing"] else "Play through the years", icon=":material/pause:" if ss["playing"] else ":material/play_arrow:",
-              type="primary", on_click=toggle_play, width="stretch")
-    speed = st.segmented_control("Speed", list(SPEEDS), default="1×", key="cc_speed", width="stretch", required=True) or "1×"
     st.caption("SIPRI trend-indicator values (TIV, millions) measure military capability transferred, not money. "
                "Some states appear under a successor's code, as in V-Dem (Russia for the Soviet Union before 1991).")
+
+speed = ss["cc_speed"] if ss.get("cc_speed") in SPEEDS else "1×"
 
 sel = [i for i in (ss.get("countries") or []) if i in NAMES]
 if not sel:
@@ -221,28 +225,42 @@ def main_supplier(iso, y):
 
 
 # ------------------------------------------------------------------ chart helpers
-def base_layout(fig, height, **kw):
-    fig.update_layout(height=height, paper_bgcolor=BG, plot_bgcolor=BG, font=dict(family=FONT, color=INK2, size=12),
-                      margin=kw.pop("margin", dict(l=0, r=8, t=8, b=0)),
-                      hoverlabel=dict(bgcolor=INK, font_color="#111110", font_family=FONT), **kw)
-    fig.update_xaxes(gridcolor=LINE, zeroline=False, linecolor=LINE, tickfont=dict(color=MUTED), automargin=True)
-    fig.update_yaxes(gridcolor=LINE, zeroline=False, linecolor=LINE, tickfont=dict(color=MUTED), automargin=True)
-    return fig
+def vl_finish(chart):
+    """Look of every Altair chart on this page (as the scatter): transparent, IBM Plex, muted axes and legends."""
+    chart = chart.properties(padding={"left": 8, "right": 4, "top": 4, "bottom": 4})  # room for the left axis labels
+    return (chart.configure_view(stroke=None).configure(background="transparent", font=FONT + ", sans-serif")
+            .configure_axis(gridColor=LINE, domainColor=LINE, tickColor=LINE, labelColor=MUTED, titleColor=MUTED,
+                            titleFontWeight="normal", labelFontSize=11, titleFontSize=12)
+            .configure_legend(labelColor=INK2, titleColor=MUTED, labelFontSize=11, labelLimit=170)
+            .configure_title(color=INK, fontSize=12, fontWeight="normal", anchor="start", offset=4))
 
 
-def legend_top(fig, entrywidth=150):
-    fig.update_layout(legend=dict(orientation="h", x=0, y=1.02, yanchor="bottom", font=dict(color=INK2, size=11), title_text="",
-                                  entrywidth=entrywidth, entrywidthmode="pixels"))
+def year_ticks(a, b, step=None):
+    step = step or (10 if b - a > 20 else 5)
+    return [v for v in range(a - a % step + (step if a % step else 0), b + 1, step)]
 
 
-def year_ts(y, end=False):
-    return datetime(y + 1 if end else y, 1, 1)
+def yr_x(field, a, b, axis=True, top=False, step=None, pad=.5):
+    """The year axis (quantitative, so a rule at a year lands in the middle of that year's bar)."""
+    ax = (alt.Axis(format="d", title=None, values=year_ticks(a, b, step), orient="top" if top else "bottom", labelFlush=False)
+          if axis else alt.Axis(format="d", title=None, values=year_ticks(a, b, step), labels=False, ticks=False, domain=False))
+    return alt.X(f"{field}:Q", scale=alt.Scale(domain=[a - pad, b + pad], nice=False, zero=False), axis=ax)
 
 
-def year_line(fig, y, dates=False, width=1.5):
-    """A vertical line at the year over the whole figure: one shape, also on figures with many subplots."""
-    x = datetime(y, 7, 1) if dates else y
-    fig.add_shape(type="line", x0=x, x1=x, xref="x", yref="paper", y0=0, y1=1, line=dict(color=INK, width=width))
+YR = "yr"  # Vega parameter holding the year
+
+
+def year_rule(width=1.5):
+    """The year as its own layer, at the parameter "yr": a chart is built once, and a new year only changes that
+    parameter (`at_year`), so Vega redraws the marks in place and the chart does not flicker."""
+    return alt.Chart().mark_rule(color=INK, strokeWidth=width).encode(x=alt.datum(alt.expr(YR), type="quantitative"))
+
+
+def at_year(chart, y):
+    """A copy of a (cached) chart with the year parameter set; the cached chart itself is not changed."""
+    c = chart.copy(deep=False)
+    c.params = ([] if c.params is alt.Undefined else list(c.params)) + [alt.VariableParameter(name=YR, value=int(y))]
+    return c
 
 
 def scroll_box(height_px, limit):
@@ -388,7 +406,7 @@ def sc_wraps(d, x, y):
 
 def sc_finish(layers):
     return (alt.layer(*layers).properties(height=SC_H)
-            .configure_view(stroke=None).configure(background="transparent", font=FONT))
+            .configure_view(stroke=None).configure(background="transparent", font=FONT + ", sans-serif"))
 
 
 def label_sides(pts, ax, width_px=480, height_px=370):
@@ -478,222 +496,358 @@ def scatter_compare(isos, a, b, y, follow, full):
 
 
 # ------------------------------------------------------------------ timelines
+# Data is cached per selection and period (st.cache_data). The finished charts are cached too (st.cache_resource, so
+# they are not copied on every run) without the year: the year rule reads the parameter "yr", which `at_year` adds on
+# every run. Building and configuring Altair charts is the slow part, so Play only pays for the year.
+CHARTS = dict(max_entries=96)
+NOT_IN_LEGEND = .06  # opacity of a line whose name is not picked in a legend
+
+
+def style(isos):
+    """Colours and dashes of these countries in the current selection (part of the chart cache keys)."""
+    return tuple((COL[i], DASH[i]) for i in isos)
+
+
 @st.cache_data
-def one_axis(isos, a, b, same_scale):
-    """Per country: democracy index line, conflict years shaded (war darker), arms imports as bars on a second axis."""
-    n = len(isos)
-    row_h = 150 if n == 1 else 112 if n <= 6 else 84
-    fig = make_subplots(rows=n, cols=1, shared_xaxes=True, vertical_spacing=min(.06, 26 / (row_h * n)),
-                        specs=[[{"secondary_y": True}]] * n, subplot_titles=[NAMES[i] for i in isos] if n > 1 else None)
+def one_axis_data(isos, a, b):
+    """Per country and year: democracy index, arms imports and hover texts; conflict runs as shading spans."""
     d = period_panel(isos, a, b)
-    cruns = nd.conflict_runs()
     conf = load_conflicts()
-    vmax = max(1.0, d["arms_imports_tiv"].max() if len(d) else 1.0)
-    shapes = []
-    for r, iso in enumerate(isos, start=1):
-        t = d[d["iso3"] == iso]
+    parts = []
+    for iso in isos:
+        t = d[d["iso3"] == iso][["iso3", "year", "democracy_index", "arms_imports_tiv", "regime_label", "max_intensity"]].copy()
         c = conf[conf["iso3"] == iso]
         names = [", ".join(dict.fromkeys(c.loc[(c["start"] <= yr) & (c["end"] >= yr), "name"])) for yr in t["year"]]
-        hover = [f"{v:.2f} ({reg})" if pd.notna(v) else "no data" for v, reg in zip(t["democracy_index"], t["regime_label"])]
-        conf_txt = [CONFLICT[int(m)] + (f" ({nm[:60]})" if nm else "") for m, nm in zip(t["max_intensity"], names)]
-        fig.add_trace(go.Bar(x=t["year"], y=t["arms_imports_tiv"], marker=dict(color="#e48461", opacity=.55), name="Arms imports",
-                             hovertemplate="%{y:,.0f} TIV<extra>Arms imports</extra>", showlegend=False),
-                      row=r, col=1, secondary_y=True)
-        fig.add_trace(go.Scatter(x=t["year"], y=t["democracy_index"], mode="lines", line=dict(color=COL[iso], width=2.2), name="Democracy index",
-                                 customdata=np.column_stack([hover, conf_txt]),
-                                 hovertemplate="%{customdata[0]}<extra>Democracy index</extra>", showlegend=False),
-                      row=r, col=1, secondary_y=False)
-        fig.add_trace(go.Scatter(x=t["year"], y=[0] * len(t), mode="markers", marker=dict(opacity=0), customdata=conf_txt,
-                                 hovertemplate="%{customdata}<extra>Conflict</extra>", showlegend=False),
-                      row=r, col=1, secondary_y=False)
-        y_dom = fig.get_subplot(r, 1).yaxis.domain  # shading as plain shapes, set once below (add_vrect is slow with many rows)
-        for cr in cruns[(cruns["iso3"] == iso) & (cruns["end"] >= a) & (cruns["start"] <= b)].itertuples():
-            shapes.append(dict(type="rect", xref="x", yref="paper", x0=max(cr.start, a) - .5, x1=min(cr.end, b) + .5,
-                               y0=y_dom[0], y1=y_dom[1], line_width=0, layer="below", fillcolor=INK,
-                               opacity=.2 if cr.intensity == 2 else .07))
-        top = vmax if same_scale else max(1.0, t["arms_imports_tiv"].max() if len(t) else 1.0)
-        fig.update_yaxes(range=[0, 1], tickvals=[0, .5, 1], row=r, col=1, secondary_y=False)
-        fig.update_yaxes(range=[0, top * 1.08], showgrid=False, nticks=3, row=r, col=1, secondary_y=True)
-    fig.update_layout(shapes=shapes)
-    base_layout(fig, row_h * n + 40, margin=dict(l=0, r=4, t=24 if n > 1 else 8, b=0), bargap=.15, hovermode="x unified")
-    fig.update_xaxes(range=[a - .5, b + .5])
-    fig.update_yaxes(tickfont=dict(color=MUTED, size=10))
-    fig.update_annotations(font=dict(color=INK, size=12), x=0, xanchor="left")
-    return fig
+        t["Democracy index"] = [f"{v:.2f} ({reg})" if pd.notna(v) else "no data" for v, reg in zip(t["democracy_index"], t["regime_label"])]
+        t["Conflict"] = [(CONFLICT[int(m)] + (f" ({nm[:60]})" if nm else "")) if pd.notna(m) else "no data"
+                         for m, nm in zip(t["max_intensity"], names)]
+        t["Arms imports"] = t["arms_imports_tiv"].map(fmt_tiv)
+        parts.append(t)
+    t = pd.concat(parts)
+    t = t.assign(h0=t["year"] - .5, h1=t["year"] + .5, b0=t["year"] - .425, b1=t["year"] + .425).drop(columns=["regime_label"])
+    cr = nd.conflict_runs()
+    cr = cr[cr["iso3"].isin(isos) & (cr["end"] >= a) & (cr["start"] <= b)]
+    shade = pd.DataFrame({"iso3": cr["iso3"], "x0": cr["start"].clip(lower=a) - .5, "x1": cr["end"].clip(upper=b) + .5,
+                          "op": np.where(cr["intensity"] == 2, .2, .07)})
+    return t, shade
+
+
+ONE_TT = [alt.Tooltip("year:Q", title="Year", format="d"), alt.Tooltip("Democracy index:N"), alt.Tooltip("Arms imports:N"),
+          alt.Tooltip("Conflict:N")]
+
+
+def one_axis_heights(n, single_h=None):
+    """Chart height of a row (Streamlit fits the whole chart, title and axis included, into it; the last row is
+    taller by the year labels) and the height of all rows together, in pixels."""
+    h = single_h or (104 if n <= 6 else 78)
+    return h, (h + 16) * n + 24
+
+
+@st.cache_resource(**CHARTS)
+def one_axis(isos, a, b, same_scale, single_h, style_):
+    """Per country: democracy index line (0–1, left axis), conflict years shaded (war darker), arms imports as bars on
+    a second axis (right). One chart per country (stacked rows; Vega-Lite's vconcat cannot stretch to the card width),
+    year labels on the last row only. Returns [(iso, chart)]."""
+    t, shade = one_axis_data(isos, a, b)
+    n = len(isos)
+    h, _ = one_axis_heights(n, single_h)
+    vmax = max(1.0, t["arms_imports_tiv"].fillna(0).max())
+    out = []
+    for k, iso in enumerate(isos):
+        last = k == n - 1
+        tt, sh = t[t["iso3"] == iso], shade[shade["iso3"] == iso]
+        top = vmax if same_scale else max(1.0, tt["arms_imports_tiv"].fillna(0).max() if len(tt) else 1.0)
+        layers = [
+            alt.Chart(sh).mark_rect(color=INK).encode(yr_x("x0", a, b, last), x2="x1:Q", opacity=alt.Opacity("op:Q", scale=None)),
+            alt.Chart(tt).mark_rect(color=ARMS, opacity=.55).encode(
+                yr_x("b0", a, b, last), x2="b1:Q", y2=alt.datum(0),
+                y=alt.Y("arms_imports_tiv:Q", scale=alt.Scale(domain=[0, top * 1.08], nice=False),
+                        axis=alt.Axis(orient="right", title=None, tickCount=3, grid=False, format=",.0f", minExtent=34))),
+            alt.Chart(tt).mark_line(color=COL[iso], strokeWidth=2.2, invalid="break-paths-filter-domains").encode(
+                yr_x("year", a, b, last),
+                y=alt.Y("democracy_index:Q", scale=alt.Scale(domain=[0, 1], nice=False),
+                        axis=alt.Axis(values=[0, .5, 1], title=None, minExtent=24))),
+            alt.Chart(tt).mark_rect(opacity=0).encode(yr_x("h0", a, b, last), x2="h1:Q", tooltip=ONE_TT),  # hover: the whole year
+            year_rule(),
+        ]
+        row = alt.layer(*layers).resolve_scale(y="independent").properties(height=h + (22 if last and n > 1 else 0))
+        out.append((iso, vl_finish(row.properties(title=NAMES[iso]) if n > 1 else row)))
+    return out
 
 
 @st.cache_data
-def regime_chart(isos, a, b):
+def regime_data(isos, a, b):
     s = nd.regime_spans()
     s = s[s["iso3"].isin(isos) & (s["end"] >= a) & (s["start"] <= b)].copy()
     if s.empty:
-        return None
-    s["from"] = s["start"].clip(lower=a).map(year_ts)
-    s["to"] = s["end"].clip(upper=b).map(lambda v: year_ts(v, end=True))
+        return None, []
+    s["x0"] = s["start"].clip(lower=a) - .5
+    s["x1"] = s["end"].clip(upper=b) + .5
     s["Country"] = s["iso3"].map(NAMES).map(short_name)
     s["Regime"] = s["regime_label"].str.capitalize()
     s["Years"] = s["start"].astype(str) + "–" + s["end"].astype(str)
-    fig = px.timeline(s, x_start="from", x_end="to", y="Country", color="Regime", hover_data={"Years": True, "from": False, "to": False, "Country": False},
-                      color_discrete_map={r.capitalize(): c for r, c in nd.REGIME_COLOURS.items()},
-                      category_orders={"Country": [short_name(NAMES[i]) for i in isos], "Regime": [r.capitalize() for r in nd.REGIMES]})
-    fig.update_traces(marker_line_width=0)
-    base_layout(fig, 90 + 26 * len(isos), bargap=.25, margin=dict(l=12, r=8, t=8, b=28))
-    legend_top(fig, 150)
-    fig.update_xaxes(range=[year_ts(a), year_ts(b, end=True)], tickformat="%Y", title=None)
-    fig.update_yaxes(title=None, showgrid=False, tickfont=dict(color=INK2))
-    return fig
+    order = list(dict.fromkeys(short_name(NAMES[i]) for i in isos))
+    return s[["Country", "Regime", "Years", "x0", "x1"]], order
 
 
-def row_bars(fig, rows, label_y, colour, name, hover, legend=True):
-    """Horizontal bars from `start` to `end` (years, inclusive) on the rows `label_y`."""
-    fig.add_trace(go.Bar(orientation="h", y=label_y, x=rows["end"] - rows["start"] + 1, base=rows["start"] - .5,
-                         marker=dict(color=colour, line_width=0), name=name, showlegend=legend, hovertext=hover,
-                         hoverinfo="text", width=.62))
+@st.cache_resource(**CHARTS)
+def regime_chart(isos, a, b):
+    s, order = regime_data(isos, a, b)
+    if s is None:
+        return None, 0
+    regs = [r.capitalize() for r in nd.REGIMES]
+    bars = alt.Chart(s).mark_bar(height=alt.RelativeBandSize(.75)).encode(
+        yr_x("x0", a, b), x2="x1:Q",
+        y=alt.Y("Country:N", sort=order, scale=alt.Scale(domain=order),
+                axis=alt.Axis(title=None, labelColor=INK2, labelLimit=160, ticks=False, domain=False, labelFontSize=12)),
+        color=alt.Color("Regime:N", scale=alt.Scale(domain=regs, range=[nd.REGIME_COLOURS[r] for r in nd.REGIMES]),
+                        legend=alt.Legend(orient="top", direction="horizontal", title=None, columns=4 if len(isos) > 1 else 2,
+                                          symbolType="square")),
+        tooltip=["Country:N", "Regime:N", "Years:N"])
+    h = 26 * len(order) + 64  # the whole chart: rows, legend and year axis
+    return vl_finish(alt.layer(bars, year_rule()).properties(height=h)), h + 10
 
 
 @st.cache_data
-def conflict_chart(isos, a, b):
+def conflict_data(isos, a, b):
     """One row per conflict (named as in the HTML version), bars for its war and minor years in the period."""
     c = load_conflicts()
     c = c[c["iso3"].isin(isos) & (c["end"] >= a) & (c["start"] <= b)].copy()
     if c.empty:
-        return None, list(isos), 0, 0
+        return None, [], list(isos), 0
     c["s"], c["e"] = c["start"].clip(lower=a), c["end"].clip(upper=b)
     c["years"] = c["e"] - c["s"] + 1
     order = {iso: k for k, iso in enumerate(isos)}
     first = c.groupby(["iso3", "name"])["s"].transform("min")
     c = c.assign(k=c["iso3"].map(order), first=first).sort_values(["k", "first", "name", "s"])
     tot = c.groupby(["iso3", "name"])["years"].sum()
-    c["label"] = [f"{short_name(nm, 24)} · {tot[(iso, nm)]} yr" for iso, nm in zip(c["iso3"], c["name"])]
-    keys = list(dict.fromkeys(zip(c["iso3"], c["label"])))
-    ylab = (lambda f: [f["label"].tolist()]) if single else (lambda f: [f["iso3"].map(NAMES).map(short_name).tolist(), f["label"].tolist()])
-    fig = go.Figure()
-    allrows = pd.DataFrame({"iso3": [k[0] for k in keys], "label": [k[1] for k in keys]})
-    fig.add_trace(go.Bar(orientation="h", y=ylab(allrows)[0] if single else ylab(allrows), x=[0] * len(allrows), base=[a] * len(allrows),
-                         showlegend=False, hoverinfo="skip", marker_color=BG))  # fixes the row order
-    for inten, name in [(2, "War"), (1, "Minor conflict")]:
-        r = c[c["intensity"] == inten]
-        if r.empty:
+    c["row"] = [(f"{short_name(NAMES[iso])} · " if len(isos) > 1 else "") + f"{short_name(nm, 24)} · {tot[(iso, nm)]} yr"
+                for iso, nm in zip(c["iso3"], c["name"])]
+    c["x0"], c["x1"] = c["s"] - .5, c["e"] + .5
+    c["kind"] = c["intensity"].map({2: "War", 1: "Minor conflict"})
+    c["Country"] = c["iso3"].map(NAMES)
+    c["Type"] = c["type"] + np.where(c["territory"] != "", " · territory: " + c["territory"], " · over government")
+    c["Years"] = c["start"].astype(str) + np.where(c["end"] > c["start"], "–" + c["end"].astype(str), "")
+    c["Intensity"] = np.where(c["intensity"] == 2, "War, 1000+ battle deaths a year", "Minor, 25–999 battle deaths a year")
+    rows = list(dict.fromkeys(c["row"]))
+    out = c[["row", "x0", "x1", "kind", "name", "Country", "sides", "Type", "Years", "Intensity"]]
+    have = set(c["iso3"].unique())
+    return out, rows, [i for i in isos if i not in have], len(have)
+
+
+def range_rows(df, rows, a, b, colour, tooltip):
+    """Horizontal bars from x0 to x1 on the rows `rows` (in this order), year axis on top, and the year rule."""
+    step = 20 if b - a > 50 else 10
+    bars = alt.Chart(df).mark_bar(height=alt.RelativeBandSize(.62)).encode(
+        yr_x("x0", a, b, top=True, step=step), x2="x1:Q",
+        y=alt.Y("row:N", sort=rows, scale=alt.Scale(domain=rows),
+                axis=alt.Axis(title=None, labelColor=INK2, labelLimit=330, ticks=False, domain=False)),
+        color=colour, tooltip=tooltip)
+    h = 25 * len(rows) + 30  # the whole chart: rows and year axis
+    return vl_finish(alt.layer(bars, year_rule(1.2)).properties(height=h)), h + 10
+
+
+@st.cache_resource(**CHARTS)
+def conflict_chart(isos, a, b):
+    c, rows, none, n_with = conflict_data(isos, a, b)
+    if c is None:
+        return None, none, 0, 0
+    colour = alt.Color("kind:N", scale=alt.Scale(domain=list(CONFLICT_COLOURS), range=list(CONFLICT_COLOURS.values())), legend=None)
+    tt = [alt.Tooltip("name:N", title="Conflict"), alt.Tooltip("Country:N"), alt.Tooltip("sides:N", title="Sides"),
+          alt.Tooltip("Type:N"), alt.Tooltip("Years:N"), alt.Tooltip("Intensity:N")]
+    chart, h = range_rows(c, rows, a, b, colour, tt)
+    return chart, none, h, n_with
+
+
+def value_frame(isos, a, b):
+    """Supplier democracy per country and every year of the period (gaps = years without imports, NaN)."""
+    s, _ = nd.load_sup_dem()
+    s = s[s["iso3"].isin(isos) & s["year"].between(a, b)]
+    parts = []
+    for iso in isos:
+        t = s[s["iso3"] == iso].sort_values("year").set_index("year").reindex(range(a, b + 1))
+        if t["sup_dem"].notna().sum() == 0:
             continue
-        hover = (r["sides"] + "<br>" + r["type"] + np.where(r["territory"] != "", " · territory: " + r["territory"], " · over government")
-                 + "<br>" + r["start"].astype(str) + np.where(r["end"] > r["start"], "–" + r["end"].astype(str), "")
-                 + ("<br>War, 1000+ battle deaths a year" if inten == 2 else "<br>Minor, 25–999 battle deaths a year"))
-        y = ylab(r)
-        row_bars(fig, r, y[0] if single else y, CONFLICT_COLOURS[name], name, hover)
-    n = len(keys)
-    height = 40 + 25 * n
-    base_layout(fig, height, barmode="overlay", margin=dict(l=0, r=8, t=28, b=4), showlegend=False)
-    fig.update_xaxes(range=[a - .5, b + .5], title=None, dtick=20 if b - a > 50 else 10, tickangle=0, side="top")
-    fig.update_yaxes(autorange="reversed", showgrid=False, tickfont=dict(color=INK2, size=11), title=None)
-    return fig, [i for i in isos if i not in set(c["iso3"])], height, c["iso3"].nunique()
+        t["iso3"] = iso
+        t["alone"] = t["sup_dem"].notna() & t["sup_dem"].shift(1).isna() & t["sup_dem"].shift(-1).isna()
+        parts.append(t.reset_index()[["iso3", "year", "sup_dem", "share_dem", "alone"]])
+    return pd.concat(parts) if parts else pd.DataFrame(columns=["iso3", "year", "sup_dem", "share_dem", "alone"])
 
 
 @st.cache_data
-def democracy_lines(isos, a, b, follow):
-    d = period_panel(isos, a, b)
+def lines_data(isos, a, b, follow, value):
+    """Long table for a line per country (followed ones drawn on top and stronger) and a wide one for the hover
+    (one column per country, c0, c1, …)."""
+    d = period_panel(isos, a, b)[["iso3", "year", value]] if value == "democracy_index" else value_frame(isos, a, b)
     focus = set(follow) or set(isos)
+    d = d.assign(Country=d["iso3"].map(NAMES).map(short_name), Name=d["iso3"].map(NAMES), dash=d["iso3"].map(DASH),
+                 on=d["iso3"].isin(focus))
+    d["sw"] = np.where(d["on"], 2.0, 1.0)
+    d["op"] = np.where(d["on"], 1.0, .22)
+    wide = d.pivot_table(index="year", columns="iso3", values=value, dropna=False).reindex(columns=list(isos))
+    wide.columns = [f"c{k}" for k in range(len(isos))]
+    wide = wide.reset_index()
+    wide = wide.assign(h0=wide["year"] - .5, h1=wide["year"] + .5)
+    return d, wide
+
+
+@st.cache_resource(**CHARTS)
+def lines_chart(isos, a, b, follow, value, y_title, height, y_dom, y_vals, style_):
+    """A line per country; with up to LEGEND_MAX countries a legend (click a name to pick it, shift-click for more,
+    double-click the chart to show all again); hover shows every country's value of that year up to 12 countries."""
+    d, wide = lines_data(isos, a, b, follow, value)
+    have = set(d["iso3"].unique())
+    present = [i for i in isos if i in have]
+    labels = [short_name(NAMES[i]) for i in present]
     legend = len(isos) <= LEGEND_MAX
-    fig = go.Figure()
-    for iso in sorted(isos, key=lambda i: i in focus):  # followed lines on top
-        t = d[d["iso3"] == iso]
-        on = iso in focus
-        fig.add_trace(go.Scatter(x=t["year"], y=t["democracy_index"], mode="lines", name=short_name(NAMES[iso]),
-                                 line=dict(color=COL[iso], width=2 if on else 1, dash=DASH[iso]), opacity=1 if on else .22,
-                                 hovertemplate="%{y:.2f}<extra>" + NAMES[iso] + "</extra>", legendrank=list(isos).index(iso)))
-    base_layout(fig, 440, margin=dict(l=0, r=8, t=8, b=0), hovermode="x unified" if len(isos) <= 12 else "closest", showlegend=legend,
-                legend=dict(font=dict(color=INK2, size=11), itemclick="toggle", itemdoubleclick="toggleothers"))
-    fig.update_xaxes(range=[a, b])
-    fig.update_yaxes(range=[0, 1], title=dict(text="Democracy index", font=dict(color=MUTED, size=12)))
-    return fig
+    pick = alt.selection_point(name="pick_line", fields=["Country"], bind="legend")
+    colour = alt.Color("Country:N", scale=alt.Scale(domain=labels, range=[COL[i] for i in present]),
+                       legend=alt.Legend(title=None, symbolType="stroke", symbolStrokeWidth=2.5, symbolOpacity=1) if legend else None)
+    dash = alt.StrokeDash("dash:N", scale=alt.Scale(domain=["solid", "dot"], range=[[1, 0], [2, 3]]), legend=None)
+    op = alt.condition(pick, alt.Opacity("op:Q", scale=None), alt.value(NOT_IN_LEGEND)) if legend else alt.Opacity("op:Q", scale=None)
+    x = yr_x("year", a, b, pad=0)
+    yy = alt.Y(f"{value}:Q", scale=alt.Scale(domain=list(y_dom), nice=False),
+               axis=alt.Axis(title=y_title, values=list(y_vals)) if y_vals else alt.Axis(title=y_title))
+    enc = dict(x=x, y=yy, color=colour, strokeDash=dash, strokeWidth=alt.StrokeWidth("sw:Q", scale=None), opacity=op, detail="iso3:N")
+    if len(isos) > 12:  # many countries: hover a line for its name (an extra layer of hover points would be slow)
+        enc["tooltip"] = [alt.Tooltip("Name:N", title="Country")]
+    layers = [alt.Chart(d[~d["on"]]).mark_line(invalid="break-paths-filter-domains").encode(**enc),
+              alt.Chart(d[d["on"]]).mark_line(invalid="break-paths-filter-domains").encode(**enc)]
+    if legend:
+        layers[1] = layers[1].add_params(pick)
+    if "alone" in d:  # single years between gaps: a dot, or they would not show
+        layers.append(alt.Chart(d[d["alone"].astype(bool)]).mark_point(filled=True, size=22).encode(x=x, y=yy, color=colour, opacity=op))
+    if len(isos) <= 12:  # hover a year: all countries' values
+        tt = [alt.Tooltip("year:Q", title="Year", format="d")] + [
+            alt.Tooltip(f"c{k}:Q", title=NAMES[iso], format=".2f") for k, iso in enumerate(isos) if iso in have]
+        layers.append(alt.Chart(wide).mark_rect(opacity=0).encode(yr_x("h0", a, b, pad=0), x2="h1:Q", tooltip=tt))
+    layers.append(year_rule())
+    return vl_finish(alt.layer(*layers).properties(height=height))
+
+
+def democracy_lines(isos, a, b, follow):
+    return lines_chart(isos, a, b, follow, "democracy_index", "Democracy index", 440, (0, 1), None, style(isos))
 
 
 @st.cache_data
-def supplier_bars(isos, a, b):
+def supplier_bars_data(isos, a, b):
+    """Arms imports per country, year and supplier (largest suppliers by name, the rest as "Other suppliers"),
+    stacked in pandas so each bar piece is a plain rectangle."""
     f = supplier_data(isos, a, b)
-    has = [i for i in isos if f.loc[f["recipient_iso3"] == i, "tiv"].sum() > 0]
+    tot = f.groupby("recipient_iso3")["tiv"].sum()
+    has = [i for i in isos if tot.get(i, 0) > 0]
     if not has:
-        return None, list(isos), 0
+        return None, {}, has
     cmap = supplier_colours(isos, a, b)
+    order = list(cmap) + ["Other suppliers"]
     f = f[f["recipient_iso3"].isin(has)].assign(Supplier=lambda x: x["supplier"].where(x["supplier"].isin(cmap.keys()), "Other suppliers"))
-    g = f.groupby(["Country", "year", "Supplier"], as_index=False)["tiv"].sum()
-    wrap = 1 if len(has) == 1 else 2
-    rows = -(-len(has) // wrap)
-    fig = px.bar(g, x="year", y="tiv", color="Supplier", facet_col="Country" if len(has) > 1 else None, facet_col_wrap=wrap if len(has) > 1 else 0,
-                 color_discrete_map={**cmap, "Other suppliers": nd.OTHER_COLOUR},
-                 category_orders={"Supplier": list(cmap) + ["Other suppliers"], "Country": [NAMES[i] for i in has]},
-                 facet_row_spacing=min(.08, 40 / (150 * rows)), facet_col_spacing=.06,
-                 labels={"tiv": "TIV", "year": ""})
-    fig.update_traces(hovertemplate="%{x}: %{y:,.1f} TIV<extra>%{fullData.name}</extra>")
-    top = 40 + 18 * -(-(len(cmap) + 1) // 2)  # room for the legend (two entries a line in this card)
-    height = (260 if len(has) == 1 else 150 * rows) + top + 20
-    base_layout(fig, height, bargap=.1, margin=dict(l=0, r=8, t=top, b=0))
-    legend_top(fig, 125)
-    fig.update_layout(legend=dict(y=.995, yanchor="top", yref="container"))
-    fig.update_yaxes(matches=None, showticklabels=True, nticks=3, title=None, tickfont=dict(size=10))
-    fig.update_xaxes(range=[a - .5, b + .5], title=None)
-    fig.for_each_annotation(lambda an: an.update(text=an.text.split("=")[-1], font=dict(color=INK, size=12)))
-    return fig, [i for i in isos if i not in has], height
+    g = f.groupby(["recipient_iso3", "year", "Supplier"], as_index=False)["tiv"].sum()
+    g["k"] = g["Supplier"].map({s: k for k, s in enumerate(order)})
+    g = g.sort_values(["recipient_iso3", "year", "k"])
+    g["y1"] = g.groupby(["recipient_iso3", "year"])["tiv"].cumsum()
+    g["y0"] = g["y1"] - g["tiv"]
+    g["x0"], g["x1"] = g["year"] - .45, g["year"] + .45
+    return g, cmap, has
+
+
+def supplier_colour_scale(cmap):
+    return alt.Scale(domain=list(cmap) + ["Other suppliers"], range=list(cmap.values()) + [nd.OTHER_COLOUR])
+
+
+@st.cache_resource(**CHARTS)
+def supplier_charts(isos, a, b, height):
+    """The supplier colours as a legend of its own, then one chart per country (stacked bars by supplier)."""
+    g, cmap, has = supplier_bars_data(isos, a, b)
+    if g is None:
+        return None, []
+    leg = pd.DataFrame({"Supplier": list(cmap) + ["Other suppliers"]})
+    legend = vl_finish(alt.Chart(leg).mark_square(opacity=0).encode(
+        color=alt.Color("Supplier:N", scale=supplier_colour_scale(cmap),
+                        legend=alt.Legend(orient="top", direction="horizontal", columns=3, title=None, symbolType="square",
+                                          symbolOpacity=1, labelLimit=150, columnPadding=14)))
+                       .properties(height=22 * -(-(len(cmap) + 1) // 3) + 24))  # the legend's rows; the chart has no plot
+    charts = []
+    for iso in has:
+        bars = alt.Chart(g[g["recipient_iso3"] == iso]).mark_rect().encode(
+            yr_x("x0", a, b, step=20 if b - a > 50 else 10), x2="x1:Q",
+            y=alt.Y("y0:Q", title=None, axis=alt.Axis(tickCount=3, format=",.0f", minExtent=30)), y2="y1:Q",
+            color=alt.Color("Supplier:N", scale=supplier_colour_scale(cmap), legend=None),
+            tooltip=[alt.Tooltip("Supplier:N"), alt.Tooltip("year:Q", title="Year", format="d"),
+                     alt.Tooltip("tiv:Q", title="TIV", format=",.1f")])
+        ch = alt.layer(bars, year_rule(1.2)).properties(height=height)
+        charts.append((iso, vl_finish(ch.properties(title=NAMES[iso]) if len(has) > 1 else ch)))
+    return legend, charts
 
 
 @st.cache_data
-def supplier_rows(iso, a, b):
+def supplier_rows_data(iso, a, b):
     """Every supplier of one country in the period: a bar for each run of years with deliveries, total on the label."""
     f = supplier_data((iso,), a, b)
     if f.empty:
-        return None, None
+        return None, None, None
     cmap = supplier_colours((iso,), a, b, n=4)
     tot = f.groupby("supplier")["tiv"].sum().sort_values(ascending=False)
     lab = {s: f"{short_name(s, 22)} · {v:,.0f}" for s, v in tot.items()}
-    fig = go.Figure()
-    fig.add_trace(go.Bar(orientation="h", y=[lab[s] for s in tot.index], x=[0] * len(tot), base=[a] * len(tot),
-                         showlegend=False, hoverinfo="skip", marker_color=BG))
+    parts = []
     for s in tot.index:
         t = f[f["supplier"] == s].sort_values("year")
-        rr = pd.DataFrame(runs(t["year"].tolist()), columns=["start", "end"])
-        sums = [t.loc[t["year"].between(p, q), "tiv"].sum() for p, q in rr.itertuples(index=False)]
-        hover = [f"{s}<br>{p}" + (f"–{q}" if q > p else "") + f"<br>{v:,.1f} TIV delivered" for (p, q), v in zip(rr.itertuples(index=False), sums)]
-        row_bars(fig, rr, [lab[s]] * len(rr), cmap.get(s, nd.OTHER_COLOUR), s, hover, legend=False)
-    height = 40 + 24 * len(tot)
-    base_layout(fig, height, barmode="overlay", margin=dict(l=0, r=8, t=28, b=4), showlegend=False)
-    fig.update_xaxes(range=[a - .5, b + .5], title=None, side="top")
-    fig.update_yaxes(autorange="reversed", showgrid=False, tickfont=dict(color=INK2, size=11), title=None)
+        for p, q in runs(t["year"].tolist()):
+            parts.append(dict(row=lab[s], x0=p - .5, x1=q + .5, Supplier=s, Years=f"{p}" + (f"–{q}" if q > p else ""),
+                              TIV=t.loc[t["year"].between(p, q), "tiv"].sum(), col=cmap.get(s, nd.OTHER_COLOUR)))
     table = tot.rename("TIV").reset_index().rename(columns={"supplier": "Supplier"})
     yrs = f.groupby("supplier")["year"].agg(["min", "max", "nunique"])
     table["Years"] = table["Supplier"].map(lambda s: f"{yrs.loc[s, 'min']}–{yrs.loc[s, 'max']}" if yrs.loc[s, "max"] > yrs.loc[s, "min"] else str(yrs.loc[s, "min"]))
     table["Years with deliveries"] = table["Supplier"].map(yrs["nunique"])
     table["Share"] = 100 * table["TIV"] / table["TIV"].sum()
-    return fig, table
+    return pd.DataFrame(parts), [lab[s] for s in tot.index], table
 
 
-@st.cache_data
-def sup_dem_chart(isos, a, b, follow):
+@st.cache_resource(**CHARTS)
+def supplier_rows(iso, a, b):
+    df, rows, table = supplier_rows_data(iso, a, b)
+    if df is None:
+        return None, 0, None
+    tt = [alt.Tooltip("Supplier:N"), alt.Tooltip("Years:N"), alt.Tooltip("TIV:Q", title="TIV delivered", format=",.1f")]
+    chart, h = range_rows(df, rows, a, b, alt.Color("col:N", scale=None), tt)
+    return chart, h, table
+
+
+@st.cache_resource(**CHARTS)
+def sup_dem_chart(isos, a, b, follow, style_):
     s, demo = nd.load_sup_dem()
     s = s[s["iso3"].isin(isos) & s["year"].between(a, b)]
     if s.empty:
         return None, list(isos), demo
-    focus = set(follow) or set(isos)
-    fig = go.Figure()
-    for iso in sorted(isos, key=lambda i: i in focus):
-        t = s[s["iso3"] == iso].sort_values("year").set_index("year").reindex(range(a, b + 1))  # gaps = years without imports
-        if t["sup_dem"].notna().sum() == 0:
-            continue
-        on = iso in focus
-        fig.add_trace(go.Scatter(x=t.index, y=t["sup_dem"], mode="lines+markers", name=short_name(NAMES[iso]) if not single else "Supplier democracy (0–1)",
-                                 line=dict(color=COL[iso], width=2 if on else 1, dash=DASH[iso]), connectgaps=False, opacity=1 if on else .22,
-                                 marker=dict(size=np.where(t["sup_dem"].notna() & t["sup_dem"].shift(1).isna() & t["sup_dem"].shift(-1).isna(), 5, 0)),
-                                 hovertemplate="%{y:.2f}<extra>" + NAMES[iso] + "</extra>", legendrank=list(isos).index(iso)))
-        if single:
-            fig.add_trace(go.Scatter(x=t.index, y=t["share_dem"], mode="lines", name="Share of TIV from democracies",
-                                     line=dict(color=COL[iso], width=1.4, dash="dot"),
-                                     hovertemplate="%{y:.0%}<extra>Share from democracies</extra>"))
-    missing = [i for i in isos if i not in set(s["iso3"])]
-    base_layout(fig, 360, margin=dict(l=0, r=8, t=8, b=0), legend=dict(font=dict(color=INK2, size=11)),
-                hovermode="x unified" if len(isos) <= 12 else "closest", showlegend=len(isos) <= LEGEND_MAX)
-    if single:
-        legend_top(fig, 200)
-    fig.update_xaxes(range=[a, b])
-    fig.update_yaxes(range=[0, 1.02], tickvals=[0, .5, 1], title=dict(text="Supplier democracy (0–1)", font=dict(color=MUTED, size=12)))
-    return fig, missing, demo
+    have = set(s["iso3"].unique())
+    missing = [i for i in isos if i not in have]
+    if len(isos) > 1:
+        return (lines_chart(isos, a, b, follow, "sup_dem", "Supplier democracy (0–1)", 360, (0, 1.02), (0, .5, 1), style_),
+                missing, demo)
+    # one country: supplier democracy and the share of TIV from democracies
+    t = value_frame(isos, a, b)
+    if t.empty:
+        return None, list(isos), demo
+    iso = isos[0]
+    series = {"Supplier democracy (0–1)": "sup_dem", "Share of TIV from democracies": "share_dem"}
+    long = pd.concat([t.assign(Series=k, v=t[c]) for k, c in series.items()])
+    colour = alt.Color("Series:N", scale=alt.Scale(domain=list(series), range=[COL[iso], COL[iso]]),
+                       legend=alt.Legend(orient="top", direction="horizontal", title=None, columns=1, symbolType="stroke", symbolStrokeWidth=2.5, symbolOpacity=1, labelLimit=260))
+    dash = alt.StrokeDash("Series:N", scale=alt.Scale(domain=list(series), range=[[1, 0], [2, 3]]), legend=None)
+    width = alt.StrokeWidth("Series:N", scale=alt.Scale(domain=list(series), range=[2, 1.4]), legend=None)
+    x = yr_x("year", a, b, pad=0)
+    yy = alt.Y("v:Q", scale=alt.Scale(domain=[0, 1.02], nice=False), axis=alt.Axis(title="Supplier democracy (0–1)", values=[0, .5, 1]))
+    t = t.assign(h0=t["year"] - .5, h1=t["year"] + .5)
+    layers = [
+        alt.Chart(long).mark_line(invalid="break-paths-filter-domains").encode(x=x, y=yy, color=colour, strokeDash=dash, strokeWidth=width),
+        alt.Chart(t[t["alone"].astype(bool)]).mark_point(filled=True, size=22, color=COL[iso]).encode(
+            x=x, y=alt.Y("sup_dem:Q", scale=alt.Scale(domain=[0, 1.02], nice=False), axis=alt.Axis(title="Supplier democracy (0–1)", values=[0, .5, 1]))),
+        alt.Chart(t).mark_rect(opacity=0).encode(
+            yr_x("h0", a, b, pad=0), x2="h1:Q",
+            tooltip=[alt.Tooltip("year:Q", title="Year", format="d"), alt.Tooltip("sup_dem:Q", title="Supplier democracy", format=".2f"),
+                     alt.Tooltip("share_dem:Q", title="Share from democracies", format=".0%")]),
+        year_rule(1.2),
+    ]
+    return vl_finish(alt.layer(*layers).properties(height=360)), missing, demo
 
 
 # ------------------------------------------------------------------ arms flows
@@ -739,9 +893,16 @@ def flows_deck(f, cmap):
                     tooltip={"text": "{label}"}, parameters={"clearColor": [0.07, 0.07, 0.06, 1]})
 
 
-def flows_sankey(f, cmap):
+SK_H, SK_PAD, SK_STEPS = 400, 8, 24  # Sankey: height (px), gap between nodes (px), points along each band
+
+
+@st.cache_data
+def sankey_data(isos, y):
+    """Who delivered to whom in the year, drawn as a Sankey in Altair: the 8 largest suppliers left, the 10 largest
+    recipients right (the rest grouped), node heights and band widths in pixels of the chart (y runs 0..SK_H)."""
+    f = country_flows(isos, y)
     if f.empty:
-        return None
+        return None, None
     top_s = list(f.groupby("supplier")["tiv"].sum().nlargest(8).index)
     top_r = list(f.groupby("recipient")["tiv"].sum().nlargest(10).index)
     g = f.assign(s=np.where(f["supplier"].isin(top_s), f["supplier"], "Other suppliers"),
@@ -749,23 +910,59 @@ def flows_sankey(f, cmap):
     links = g.groupby(["s", "r"], as_index=False)["tiv"].sum()
     left = list(links.groupby("s")["tiv"].sum().sort_values(ascending=False).index)
     right = list(links.groupby("r")["tiv"].sum().sort_values(ascending=False).index)
-    idx = {n: i for i, n in enumerate(left)}
-    idx_r = {n: len(left) + i for i, n in enumerate(right)}
+    total = links["tiv"].sum()
+    k = min(SK_H - SK_PAD * (len(left) - 1), SK_H - SK_PAD * (len(right) - 1)) / total  # px per TIV
+    nodes, top = [], {}
+    for side, names_, col in (("s", left, "s"), ("r", right, "r")):
+        size = links.groupby(col)["tiv"].sum()
+        pos = (SK_H - (total * k + SK_PAD * (len(names_) - 1))) / 2  # centre each side
+        for n in names_:
+            h = size[n] * k
+            nodes.append(dict(node=n, side=side, y0=pos, y1=pos + h, mid=pos + h / 2, tiv=size[n]))
+            top[(side, n)] = pos
+            pos += h + SK_PAD
+    nodes = pd.DataFrame(nodes)
+    # bands: on the left ordered by recipient, on the right by supplier (as Plotly does), so they cross little
+    links["w"] = links["tiv"] * k
+    links = links.assign(ri=links["r"].map({n: i for i, n in enumerate(right)}), si=links["s"].map({n: i for i, n in enumerate(left)}))
+    links = links.sort_values(["si", "ri"])
+    links["ys"] = links["s"].map(lambda n: top[("s", n)]) + links.groupby("s")["w"].cumsum() - links["w"] / 2
+    links = links.sort_values(["ri", "si"])
+    links["yt"] = links["r"].map(lambda n: top[("r", n)]) + links.groupby("r")["w"].cumsum() - links["w"] / 2
+    t = np.linspace(0, 1, SK_STEPS)
+    smooth = t * t * (3 - 2 * t)
+    pts = []
+    for lid, l in enumerate(links.itertuples()):
+        mid = l.ys + (l.yt - l.ys) * smooth
+        tip = f"{l.s} → {l.r}: {l.tiv:,.1f} TIV"
+        pts.append(pd.DataFrame({"lid": lid, "x": t, "lo": mid - l.w / 2, "hi": mid + l.w / 2, "s": l.s, "tip": tip}))
+    return nodes, pd.concat(pts)
 
-    def rgba(h, a):
-        h = h.lstrip("#")
-        return "rgba(%d,%d,%d,%s)" % (int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16), a)
 
-    fig = go.Figure(go.Sankey(
-        arrangement="snap",
-        node=dict(label=left + right, pad=8, thickness=10, line=dict(width=0),
-                  color=[flow_colour(n, cmap) for n in left] + [INK2] * len(right),
-                  hovertemplate="%{label}: %{value:,.0f} TIV<extra></extra>"),
-        link=dict(source=links["s"].map(idx), target=links["r"].map(idx_r), value=links["tiv"],
-                  color=[rgba(flow_colour(x, cmap), .35) for x in links["s"]],
-                  hovertemplate="%{source.label} → %{target.label}: %{value:,.1f} TIV<extra></extra>")))
-    fig.update_layout(height=420, margin=dict(l=0, r=0, t=4, b=4), paper_bgcolor=BG, font=dict(color=INK, size=11, family=FONT))
-    return fig
+@st.cache_resource(**CHARTS)
+def sankey_chart(isos, y, a, b):
+    cmap = supplier_colours(isos, a, b)
+    nodes, bands = sankey_data(isos, y)
+    if nodes is None:
+        return None
+    nodes = nodes.assign(col=[flow_colour(n, cmap) if s == "s" else INK2 for n, s in zip(nodes["node"], nodes["side"])],
+                         x0=np.where(nodes["side"] == "s", -.035, 1.0), x1=np.where(nodes["side"] == "s", 0.0, 1.035),
+                         tip=nodes["node"] + ": " + nodes["tiv"].map(lambda v: f"{v:,.0f}") + " TIV")
+    bands = bands.assign(col=bands["s"].map(lambda s: flow_colour(s, cmap)))
+    xs = alt.Scale(domain=[-.035, 1.035], nice=False, zero=False)
+    ys = alt.Scale(domain=[0, SK_H], reverse=True, nice=False, zero=False)
+    x, yy, ny = alt.X("x:Q", scale=xs, axis=None), alt.Y("lo:Q", scale=ys, axis=None), alt.Y("y0:Q", scale=ys, axis=None)
+    tip = [alt.Tooltip("tip:N", title=" ")]
+    layers = [
+        alt.Chart(bands).mark_area(opacity=.35).encode(x, yy, y2="hi:Q", detail="lid:N", color=alt.Color("col:N", scale=None), tooltip=tip),
+        alt.Chart(nodes).mark_rect().encode(alt.X("x0:Q", scale=xs, axis=None), x2="x1:Q", y=ny, y2="y1:Q",
+                                            color=alt.Color("col:N", scale=None), tooltip=tip),
+        alt.Chart(nodes[nodes["side"] == "s"]).mark_text(align="left", dx=4, color=INK, fontSize=11).encode(
+            alt.X("x1:Q", scale=xs, axis=None), alt.Y("mid:Q", scale=ys, axis=None), text="node:N"),
+        alt.Chart(nodes[nodes["side"] == "r"]).mark_text(align="right", dx=-4, color=INK, fontSize=11).encode(
+            alt.X("x0:Q", scale=xs, axis=None), alt.Y("mid:Q", scale=ys, axis=None), text="node:N"),
+    ]
+    return vl_finish(alt.layer(*layers).properties(height=SK_H))
 
 
 # ------------------------------------------------------------------ year by year
@@ -784,14 +981,14 @@ def year_table(isos, a, b):
 # ------------------------------------------------------------------ page body (re-run on its own while playing)
 @st.fragment(run_every=SPEEDS[speed] if ss["playing"] else None)
 def body():
-    if ss.pop("cc_full_rerun", False):  # a click in the scatter moved the year: update the sidebar slider too
+    if ss.pop("cc_full_rerun", False):  # Play, Pause or the speed changed: the fragment's timer is set on a full run
         st.rerun(scope="app")
     a, b = period_bounds()
     if ss["playing"]:
         if ss["year"] >= b:
             ss["playing"] = False
             ss["cc_year_slider"] = ss["year"]
-            st.rerun()
+            st.rerun(scope="app")
         ss["year"] += 1
     y = ss["year"]
     isos = tuple(sel)
@@ -800,11 +997,25 @@ def body():
     group = ss.get("cc_group_name")
 
     st.title(names[0] if single else group or f"Comparing {len(sel)} countries", anchor=False)
-    st.caption(f"Regime, democracy index, armed conflict and arms imports, {a}–{b}. Change the year in the sidebar or press Play."
+    st.caption(f"Regime, democracy index, armed conflict and arms imports, {a}–{b}. Move the year or press Play."
                if single else f"{len(sel)} countries side by side, {a}–{b}: " + ", ".join(names[:8]) + (f" and {len(sel) - 8} more." if len(sel) > 8 else "."))
 
+    # the year bar: Play, speed, year and period (the slider follows Play)
+    with st.container(horizontal=True, vertical_alignment="center", gap="medium"):
+        st.button("Pause" if ss["playing"] else "Play", icon=":material/pause:" if ss["playing"] else ":material/play_arrow:",
+                  type="primary", on_click=toggle_play, key="cc_play", help="Play through the years of the period.")
+        st.segmented_control("Speed", list(SPEEDS), key="cc_speed", required=True, on_change=full_rerun,
+                             label_visibility="collapsed", help="Play speed")
+        ss["cc_year_slider"] = y
+        st.slider("Year", a, b, key="cc_year_slider", on_change=slider_moved, label_visibility="collapsed", width="stretch")
+        st.segmented_control("Period", list(PERIODS), key="cc_period", required=True, on_change=clamp_year,
+                             label_visibility="collapsed", help="Limits the year slider and Play to this period.")
+
     # loading bar for big selections (not while playing, where it would flicker every year)
-    bar = st.progress(0, text=f"Loading {len(sel)} countries…") if len(sel) > 8 and not ss["playing"] else None
+    # (always in its own st.empty slot: an element that comes and goes would shift every chart below it, and
+    # Streamlit would mount those charts anew)
+    bar_slot = st.empty()
+    bar = bar_slot.progress(0, text=f"Loading {len(sel)} countries…") if len(sel) > 8 and not ss["playing"] else None
 
     def loaded(frac, text):
         if bar is not None:
@@ -816,8 +1027,7 @@ def body():
                 + ("" if len(no_data) < len(sel) else "The state did not exist then. Try another period."
                    if single else "Try another period."), icon=":material/info:")
         if len(no_data) == len(sel):
-            if bar is not None:
-                bar.empty()
+            bar_slot.empty()
             return
 
     # ---- snapshot of the year
@@ -902,17 +1112,14 @@ def body():
         if single:
             st.markdown("**Democracy, conflict and arms on one axis**")
             st.caption("Line: democracy index (0–1). Bars: arms imports (TIV, right axis). Shading: war (darker) or minor conflict.")
-            fig = one_axis(isos, a, b, False)
-            year_line(fig, y, width=1.5)
-            fig.update_layout(height=470)
-            st.plotly_chart(fig, key="cc_axis1", config=NO_BAR)
+            (_, chart), = one_axis(isos, a, b, False, 450, style(isos))
+            st.altair_chart(at_year(chart, y), key="cc_axis1", width="stretch")
         else:
             st.markdown("**Democracy index**")
-            st.caption("V-Dem, 0 to 1. " + ("Click a name in the legend to hide it; double-click to show only that country."
+            st.caption("V-Dem, 0 to 1. " + ("Click a name in the legend to show only that country (shift-click for more, "
+                                            "double-click the chart to show all again)."
                                             if len(isos) <= LEGEND_MAX else "Followed countries stand out; hover a line for its name."))
-            fig = democracy_lines(isos, a, b, follow)
-            year_line(fig, y, width=1.5)
-            st.plotly_chart(fig, key="cc_demo", config=NO_BAR)
+            st.altair_chart(at_year(democracy_lines(isos, a, b, follow), y), key="cc_demo", width="stretch")
 
     # big selections: the per-country rows show only the followed countries
     rows_isos = isos if len(isos) <= ROWS_MAX else (follow or tuple(largest_importers(isos, a, b, 6)))
@@ -928,10 +1135,10 @@ def body():
                               help="Arms bars on one scale for every country instead of one scale per row.")
             st.caption("Line: democracy index (0–1, left axis). Bars: arms imports (TIV, right axis). Shading: war (darker) or minor conflict. "
                        "Hover a year for the values and the conflicts." + rows_note)
-            fig = one_axis(rows_isos, a, b, same)
-            year_line(fig, y, width=1.5)
-            with scroll_box(fig.layout.height, 760):
-                st.plotly_chart(fig, key="cc_axis", config=NO_BAR)
+            charts = one_axis(rows_isos, a, b, same, None, style(rows_isos))
+            with scroll_box(one_axis_heights(len(rows_isos))[1], 760):
+                for iso, chart in charts:  # one chart per country, stacked
+                    st.altair_chart(at_year(chart, y), key=f"cc_axis_{iso}", width="stretch")
 
     loaded(.55, "regimes and conflicts")
     # ---- regime + conflicts (side by side for one country; stacked for a comparison, which has many more rows)
@@ -942,26 +1149,24 @@ def body():
     with left, st.container(border=True, height="stretch"):
         st.markdown("**Regime**")
         st.caption("V-Dem regime type per year.")
-        fig = regime_chart(isos, a, b)
-        if fig is None:
+        chart, height = regime_chart(isos, a, b)
+        if chart is None:
             st.info("No regime data in this period.", icon=":material/info:")
         else:
-            year_line(fig, y, dates=True)
-            with scroll_box(fig.layout.height, 640):
-                st.plotly_chart(fig, key="cc_regime", config=NO_BAR)
+            with scroll_box(height, 640):
+                st.altair_chart(at_year(chart, y), key="cc_regime", width="stretch")
     with right, st.container(border=True, height="stretch"):
         st.markdown("**Armed conflicts**")
-        fig, none, height, n_with = conflict_chart(isos, a, b)
-        if fig is None:
+        chart, none, height, n_with = conflict_chart(isos, a, b)
+        if chart is None:
             st.caption("UCDP, 25+ battle deaths a year.")
             st.info(f"No armed conflict with 25 or more battle deaths in {a}–{b}"
                     + ("." if single else f" in any of the {len(isos)} countries."), icon=":material/info:")
         else:
             st.caption("UCDP. Light bars: war (1,000+ battle deaths a year); dark bars: minor conflict (25–999). One row per conflict, "
                        "named after the other side, with its conflict years in this period. Hover a bar for the sides and type.")
-            year_line(fig, y)
             with scroll_box(height, 640):
-                st.plotly_chart(fig, key="cc_conflict", config=NO_BAR)
+                st.altair_chart(at_year(chart, y), key="cc_conflict", width="stretch")
             if not single:
                 muted_list(f"No armed conflict in {a}–{b}", none)
 
@@ -971,39 +1176,46 @@ def body():
     with left, st.container(border=True, height="stretch"):
         st.markdown("**Arms imports by supplier**")
         st.caption("SIPRI TIV per year, coloured by the largest suppliers of " + ("this country" if single else "these countries") + " in the period." + rows_note)
-        fig, none, height = supplier_bars(rows_isos, a, b)
-        if fig is None:
+        n_has = len(supplier_bars_data(rows_isos, a, b)[2])
+        row_h = 280 if n_has == 1 else 150
+        legend, charts = supplier_charts(rows_isos, a, b, row_h)
+        if legend is None:
             st.info(f"No major arms imports recorded in {a}–{b}.", icon=":material/info:")
         else:
-            year_line(fig, y, width=1.2)
-            with scroll_box(height, 760):
-                st.plotly_chart(fig, key="cc_sup", config=NO_BAR)
+            st.altair_chart(legend, key="cc_sup_legend", width="stretch")
+            # one chart per country, two per row (Vega-Lite facets cannot stretch to the card width)
+            with scroll_box((row_h + 16) * -(-len(charts) // 2), 760):
+                for r0 in range(0, len(charts), 2):
+                    cols = st.columns(2, gap="small") if len(charts) > 1 else [st.container()]
+                    for col, (iso, chart) in zip(cols, charts[r0:r0 + 2]):
+                        with col:
+                            st.altair_chart(at_year(chart, y), key=f"cc_sup_{iso}", width="stretch")
+            has = [iso for iso, _ in charts]
+            none = [i for i in rows_isos if i not in has]
             muted_list(f"No major arms imports in {a}–{b}", none)
-            with_imports = [i for i in rows_isos if i not in none]
+            with_imports = has
             with st.expander("Every supplier, year by year", icon=":material/list:"):
                 who = with_imports[0] if len(with_imports) == 1 else st.selectbox(
                     "Country", with_imports, format_func=NAMES.get, key="cc_sup_country")
-                rfig, table = supplier_rows(who, a, b)
+                rchart, rheight, table = supplier_rows(who, a, b)
                 st.caption(f"{len(table)} suppliers of {NAMES[who]} in {a}–{b}. A bar for each run of years with deliveries; "
                            "the number after the name is the total TIV in the period.")
-                year_line(rfig, y)
-                with scroll_box(rfig.layout.height, 420):
-                    st.plotly_chart(rfig, key="cc_sup_rows", config=NO_BAR)
+                with scroll_box(rheight, 420):
+                    st.altair_chart(at_year(rchart, y), key="cc_sup_rows", width="stretch")
                 st.dataframe(table, hide_index=True, height=min(38 + 35 * len(table), 320), alt=f"All arms suppliers of {NAMES[who]} in the period",
                              column_config={"TIV": st.column_config.NumberColumn("TIV", format="localized"),
                                             "Share": st.column_config.ProgressColumn("Share", format="%.1f%%", min_value=0, max_value=100)})
     with right, st.container(border=True, height="stretch"):
         st.markdown("**Who supplied the arms**")
-        fig, missing, demo = sup_dem_chart(isos, a, b, follow)
+        chart, missing, demo = sup_dem_chart(isos, a, b, follow, style(isos))
         if demo:
             st.warning("Placeholder numbers until notebook 08 is done.", icon=":material/science:")
         st.caption("How democratic the suppliers were, weighted by TIV: 0 = only autocratic suppliers, 1 = only democratic ones. "
                    "Gaps: years without imports.")
-        if fig is None:
+        if chart is None:
             st.info(f"No arms imports to weigh in {a}–{b}.", icon=":material/info:")
         else:
-            year_line(fig, y, width=1.2)
-            st.plotly_chart(fig, key="cc_supdem", config=NO_BAR)
+            st.altair_chart(at_year(chart, y), key="cc_supdem", width="stretch")
             muted_list("No imports to weigh", missing)
 
     loaded(.9, "arms flows")
@@ -1026,10 +1238,9 @@ def body():
                 if len(f) > n:
                     st.badge(f"Largest {n} of {len(f)} deliveries drawn", color="gray")
             with sk_col:
-                st.plotly_chart(flows_sankey(f, cmap), key="cc_sankey", config=NO_BAR)
+                st.altair_chart(sankey_chart(isos, y, a, b), key="cc_sankey", width="stretch")
 
-    if bar is not None:
-        bar.empty()
+    bar_slot.empty()
     # ---- year by year
     with st.expander("Year-by-year table" + ("" if single else "s"), icon=":material/table:"):
         t = year_table(isos, a, b)

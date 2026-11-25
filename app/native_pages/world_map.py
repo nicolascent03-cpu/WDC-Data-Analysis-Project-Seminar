@@ -1068,7 +1068,7 @@ map_card()
 
 
 # ------------------------------------------------------------------ main finding: the A1 regression of notebook 08
-# (no split into high and low importers: arms imports before the onset enter the model as one standardised variable)
+# (arms imports before the onset enter the model as one standardised variable)
 res, res_src = nr.load("reg_results")
 a1 = nr.a1_main(res)
 with st.container(border=True):
@@ -1081,8 +1081,8 @@ with st.container(border=True):
                 st.badge("Placeholder", icon=":material/science:", color="orange")
         st.caption("Regression (model A1 of notebook 08): change in the democracy index k years after a conflict starts, "
                    "compared with the year before. Arms imports of the 5 years before the onset enter as one continuous, "
-                   "standardised variable (onset × arms imports), with country and year fixed effects, so there is no "
-                   "cut-off between high and low importers. Shaded: 95% confidence band.")
+                   "standardised variable (onset × arms imports), with country and year fixed effects. Shaded: 95% "
+                   "confidence band.")
         st.markdown(":material/arrow_downward: Below the zero line = less democratic than just before the conflict began.")
         sentence = nr.a1_sentence(a1, k=5)
         if sentence:

@@ -62,17 +62,23 @@ ss.setdefault("cc_speed", "1×")
 # The URL wins when it names countries.
 if "countries" not in st.query_params:
     ss.setdefault("countries", ["ETH"])
+def reset_follow():
+    """A new country list: the scatter picks whom to follow afresh (everyone up to 8, else the 6 largest importers)."""
+    for k in ("cc_follow", "cc_follow_for", "_cc_follow_keep"):
+        ss.pop(k, None)
+
+
 # one-shot hand-overs from other pages: a group picked on Start, or countries chosen on the World map
 _group = ss.pop("cmp_group", None)
 if _group in GROUPS:
     ss["countries"] = list(GROUPS[_group])
     ss["cc_group_name"] = _group
-    ss.pop("cc_follow", None)
+    reset_follow()
 _picked = [i for i in (ss.pop("cmp_countries", None) or []) if i in NAMES]
 if _picked:
     ss["countries"] = _picked
     ss.pop("cc_group_name", None)
-    ss.pop("cc_follow", None)
+    reset_follow()
 
 
 def period_bounds():
@@ -112,7 +118,7 @@ def group_chosen():
     if name:
         ss["countries"] = list(GROUPS[name])
         ss["cc_group_name"] = name
-        ss.pop("cc_follow", None)
+        reset_follow()
     ss["cc_group"] = None
 
 
@@ -120,7 +126,7 @@ def clear_comparison():
     keep = ss.get("countries") or ["ETH"]
     ss["countries"] = keep[:1]
     ss.pop("cc_group_name", None)
-    ss.pop("cc_follow", None)
+    reset_follow()
 
 
 def scatter_clicked():
@@ -1119,7 +1125,7 @@ def body():
 
     # the year bar, pinned to the bottom of the screen (st.bottom) so it stays in reach while scrolling: Play, speed,
     # year and period (the slider follows Play). The fragment writes there on every run, the full one included.
-    with st.bottom, st.container(horizontal=True, vertical_alignment="center", gap="medium"):
+    with st.bottom, st.container(horizontal=True, vertical_alignment="center", gap="medium", wrap=False):  # one line: the slider shrinks instead
         st.button("Pause" if ss["playing"] else "Play", icon=":material/pause:" if ss["playing"] else ":material/play_arrow:",
                   type="primary", on_click=toggle_play, key="cc_play", help="Play through the years of the period.")
         st.segmented_control("Speed", list(SPEEDS), key="cc_speed", required=True, on_change=full_rerun,
@@ -1235,11 +1241,16 @@ def body():
                 if ss.get("cc_follow_for") != isos:  # a new list: follow everyone up to 8, else the 6 largest importers
                     ss["cc_follow_for"] = isos
                     ss["cc_follow"] = list(isos) if len(isos) <= 8 else largest_importers(isos, a, b, 6)
+                elif "cc_follow" not in ss:
+                    # Streamlit drops a widget's value when another page is shown; coming back, restore the list from
+                    # the copy kept below (else the scatter showed no followed country: no paths, no labels)
+                    ss["cc_follow"] = list(ss.get("_cc_follow_keep") or [])
                 ss["cc_follow"] = [i for i in ss.get("cc_follow", []) if i in isos]
                 fol = tuple(st.multiselect("Follow", list(isos), format_func=NAMES.get, key="cc_follow",
                                            placeholder="Pick countries to show their trails and labels",
                                            help="Followed countries get their path and a label here, and stand out in the "
                                                 "democracy and supplier charts. Clicking a faint bubble follows it too."))
+                ss["_cc_follow_keep"] = list(fol)  # a plain key: survives page changes, unlike the widget's own
                 sc = scatter_compare(isos, a, b, y, fol, full, whole=not ss["playing"])
             if sc is None:
                 st.info(f"No V-Dem data in {y} for {'this country' if single else 'these countries'}. Move the year or pick another period.",

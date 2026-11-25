@@ -297,7 +297,7 @@ def map_legend(symbol):
                       symbolStrokeWidth=3 if symbol == "stroke" else .8,
                       symbolStrokeColor=alt.Undefined if symbol == "stroke" else "#45443f",
                       symbolOpacity=.95, labelColor=INK2, labelFontSize=12,
-                      labelFont=FONT, fillColor="rgba(26,26,25,.85)", strokeColor=LINE, padding=8, cornerRadius=6, offset=4,
+                      labelFont=FONT + ", sans-serif", fillColor="rgba(26,26,25,.85)", strokeColor=LINE, padding=8, cornerRadius=6, offset=4,
                       rowPadding=2)
 
 
@@ -603,6 +603,40 @@ def buildup_top(y, n):
     return alt_finish(layers, SIDE_H - 64)
 
 
+def supplier_top(y):
+    """Side panel of Arms flows: the 10 largest suppliers of the year as rows (rank, name, bar in the supplier's
+    colour, TIV), the same list as the top-10 of Arms build-up, so the map keeps the same size in every mode."""
+    f = flows[(flows["year"] == y) & (flows["tiv"] > 0)]
+    top = f[~f["supplier"].map(nd.is_non_state)].groupby("supplier")["tiv"].sum().nlargest(10)
+    if top.empty:
+        return None
+    tot = f["tiv"].sum()
+    d = pd.DataFrame({"k": range(len(top)), "rank": [str(k + 1) for k in range(len(top))], "name": list(top.index),
+                      "v": top.values, "col": [nd.supplier_colour(s) for s in top.index]})
+    d["val"] = [fmt(x) for x in d["v"]]
+    d["Supplier"] = [f"{s} · {y}" for s in d["name"]]
+    d["Delivered"] = [f"{fmt(x)} TIV ({pct(x, tot)} of the year's total)" for x in d["v"]]
+    d["vmax"] = float(top.max())
+    yk = alt.Y("k:O", axis=None, scale=alt.Scale(domain=list(range(10)), paddingInner=0, paddingOuter=0))
+    xs = alt.Scale(domain=[0, float(top.max())], nice=False, zero=True,
+                   range=[alt.ExprRef("width * 0.6"), alt.ExprRef("width - 64")])
+    tip = [alt.Tooltip("Supplier:N"), alt.Tooltip("Delivered:N")]
+    row = alt.Chart(d).mark_rect(opacity=0.001).encode(x=alt.value(0), x2=alt.value("width"), y=yk, tooltip=tip)
+    track = alt.Chart(d).mark_bar(height=10, cornerRadius=3, color="#111110").encode(
+        x=alt.X("vmax:Q", scale=xs, axis=None), x2=alt.value(alt.ExprRef("width * 0.6")), y=yk)
+    bar = alt.Chart(d).mark_bar(height=10, cornerRadius=3).encode(
+        x=alt.X("v:Q", scale=xs, axis=None), x2=alt.value(alt.ExprRef("width * 0.6")), y=yk,
+        color=alt.Color("col:N", scale=None, legend=None))
+    rank = alt.Chart(d).mark_text(align="left", color=MUTED, fontSize=12, font="IBM Plex Mono, ui-monospace, monospace").encode(
+        x=alt.value(4), y=yk, text="rank:N")
+    name = alt.Chart(d).mark_text(align="left", color=INK, fontSize=13, limit=alt.ExprRef("width * 0.6 - 36")).encode(
+        x=alt.value(28), y=yk, text="name:N")
+    val = alt.Chart(d).mark_text(align="right", color=INK, fontSize=12, fontWeight=500,
+                                 font="IBM Plex Mono, ui-monospace, monospace").encode(x=alt.value("width"), y=yk, text="val:N")
+    layers = alt.layer(row, track, bar, rank, name, val).properties(padding={"left": 0, "right": 4, "top": 0, "bottom": 0})
+    return alt_finish(layers, SIDE_H - 64)
+
+
 @st.cache_data
 def regime_counts():
     """Countries per regime type (columns 0-3) per year."""
@@ -856,7 +890,7 @@ def map_card():
                                  label_visibility="collapsed")
         # the year bar, pinned to the bottom of the screen (st.bottom): Play, speed, year and period; the slider follows Play
         with year_bar:
-            with st.container(horizontal=True, vertical_alignment="center", gap="medium"):
+            with st.container(horizontal=True, vertical_alignment="center", gap="medium", wrap=False):  # one line: the slider shrinks instead
                 st.button("Pause" if ss["playing"] else "Play", icon=":material/pause:" if ss["playing"] else ":material/play_arrow:",
                           type="primary", on_click=toggle_play, key="wm_play")
                 st.segmented_control("Speed", list(SPEEDS), key="wm_speed", required=True, on_change=full_rerun,
@@ -875,13 +909,11 @@ def map_card():
         pin_iso = pin[2:] if pin.startswith("r:") else nd.SUPPLIER_ISO.get(pin[2:]) if pin.startswith("s:") else None
         # one map for the three modes: same chart, size, projection and legend box; the badge below always takes one line
         n = f"{ss.get('_wm_card_n', 0)}|{pin}"
-        # as the HTML: map | side panel (Arms flows: 62 | 38 with the chord ring; the others: regime bars or the top-10
-        # list in a narrower column, so the map stays larger than in the HTML), then the river of time at full width.
-        # The map's height follows its width, so it grows with the screen.
-        if mode == "Arms flows":
-            left, right = st.columns([62, 38], gap="medium")
-        else:
-            left, right = st.columns([3.2, 1], gap="medium", vertical_alignment="center")
+        # map | side panel, the same split in every mode so the map keeps one size (Regimes: regime bars; Arms flows:
+        # the 10 largest suppliers; Arms build-up: the 10 largest build-ups). Arms flows then has the chord ring in a
+        # row of its own, and every mode ends with the river of time at full width. The map's height follows its
+        # width, so it grows with the screen.
+        left, right = st.columns([3.2, 1], gap="medium", vertical_alignment="center")
         with left:
             if mode == "Regimes":
                 chart = regimes_map(y, show_conflict, card_iso, n)
@@ -899,20 +931,28 @@ def map_card():
             st.vega_lite_chart(chart, key=MAP_KEY[mode], on_select=map_clicked, selection_mode=MAP_SELECTIONS[mode],
                             width="stretch", alt=f"World map: {TITLES[mode].lower()} in {y}. Click a country for its card.")
             st.badge(badge, color="gray")
+        if mode == "Arms flows":  # the chord ring of the HTML, in a full-width row under the map
+            if pin_iso in NAMES:  # a pinned country: its card can open the compare page
+                st.markdown(f"**Who supplied whom in {y}**")
+                st.button(f"Open {NAMES[pin_iso]} in Countries & compare", icon=":material/compare_arrows:",
+                          type="tertiary", key="wm_pin_cmp", on_click=open_in_compare, args=(pin_iso,))
+            else:
+                side_header(f"Who supplied whom in {y}", "Hover a country, click to pin its card")
+            chord_ring(y, pinned=ss.get("wm_pin"), height=SIDE_H + 60, key="wm_chord",
+                       tween_ms=int(min(800, 700 * PACE[mode] / SPEEDS[speed])), on_pin=chord_pin, on_close=chord_close)
         riv_col = st.container()
         with right:
-            with st.container(height=SIDE_H if mode == "Arms flows" else "content", border=False):
-                if mode == "Arms flows":
-                    if pin_iso in NAMES:  # a pinned country: its card can open the compare page
-                        st.markdown(f"**Who supplied whom in {y}**")
-                        st.button(f"Open {NAMES[pin_iso]} in Countries & compare", icon=":material/compare_arrows:",
-                                  type="tertiary", key="wm_pin_cmp", on_click=open_in_compare, args=(pin_iso,))
-                    else:
-                        side_header(f"Who supplied whom in {y}", "Hover a country, click to pin its card")
-                    chord_ring(y, pinned=ss.get("wm_pin"), height=SIDE_H - 94, key="wm_chord",
-                               tween_ms=int(min(800, 700 * PACE[mode] / SPEEDS[speed])), on_pin=chord_pin, on_close=chord_close)
-                elif card_iso is not None:
+            with st.container(border=False):
+                if card_iso is not None:
                     country_card(card_iso, y)
+                elif mode == "Arms flows":
+                    side_header(f"Largest suppliers in {y}", "TIV delivered in the year")
+                    top_sup = supplier_top(y)
+                    if top_sup is None:
+                        st.info(f"No deliveries in {y}.", icon=":material/info:")
+                    else:
+                        st.altair_chart(top_sup, key="sup_top_chart", width="stretch",
+                                        alt=f"The 10 largest arms suppliers in {y}")
                 elif mode == "Regimes":
                     rc = regime_counts().loc[y]
                     side_header(f"Regimes in {y}", f"Number of countries ({int(rc.sum())} with data)")

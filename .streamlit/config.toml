@@ -8,7 +8,7 @@ base = "dark"
 font = "'IBM Plex Sans':https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap"
 headingFont = "'IBM Plex Sans Condensed':https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@500;600;700&display=swap"
 codeFont = "'IBM Plex Mono':https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&display=swap"
-baseFontSize = 15
+baseFontSize = 16  # 16 rather than the HTML's 15: the page menu in the sidebar reads more clearly
 headingFontWeights = [600, 600, 600, 600, 500, 500]
 # heading sizes of the HTML version: page title 40 px, section 26 px, card title 20 px, small headings 16 px
 headingFontSizes = ["40px", "26px", "20px", "16px", "14px", "13px"]

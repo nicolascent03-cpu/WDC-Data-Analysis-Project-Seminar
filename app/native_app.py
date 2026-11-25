@@ -48,8 +48,8 @@ pages = st.navigation([
 
 if st.session_state.pop("_g_go", False):
     st.switch_page(COMPARE)
-# the search box of the HTML top bar, under the page menu (Countries & compare has its own country picker)
-if pages.url_path != "compare":
+# the search box of the HTML top bar, under the page menu (Countries & compare and the World map have their own)
+if pages.url_path not in ("compare", "world_map"):
     names = country_names()
     with st.sidebar:
         st.selectbox("Search a country", list(names), format_func=names.get, index=None, key="g_search",

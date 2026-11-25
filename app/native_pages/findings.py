@@ -110,8 +110,7 @@ with st.container(border=True):
         st.info("Not available yet: the A1 models of notebook 08 have not been run.", icon=":material/hourglass_empty:")
     else:
         st.markdown(nr.a1_sentence(main, 5))
-        st.markdown(legend_line([(f"{nr.A1_AVG} (b1)", nr.ACCENT, "━"), (f"{nr.A1_MORE} (b1 + b2)", nr.HI, "╍"),
-                                 ("Band: 95% confidence interval", "#5a5955", "■")]))
+        st.markdown(nr.a1_legend())
         st.altair_chart(nr.a1_chart(main, 280), key="fd_main", width="stretch",
                         alt="Change in the democracy index 1 to 10 years after conflict onset, at average arms imports "
                             "and at one standard deviation more arms imports")

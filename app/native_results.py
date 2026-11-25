@@ -258,3 +258,12 @@ def a1_chart(d, height=260):
             .configure_axis(gridColor=LINE, domainColor=LINE, tickColor=LINE, labelColor=MUTED, titleColor=MUTED,
                             titleFontWeight="normal", labelFontSize=11, titleFontSize=12)
             .configure_legend(labelColor=INK2, labelFontSize=12))
+
+
+ci_text = _ci  # public name, used by the World map's "Show the numbers" table
+
+
+def a1_legend():
+    """The legend of a1_chart as a one-line Markdown text (the chart itself draws none)."""
+    items = [(f"{A1_AVG} (b1)", ACCENT, "━"), (f"{A1_MORE} (b1 + b2)", HI, "╍"), ("Band: 95% confidence interval", "#5a5955", "■")]
+    return ":small[" + " ".join(f':color[{sym}]{{foreground="{c}"}} {n.replace(" ", chr(160))}' for n, c, sym in items) + "]"

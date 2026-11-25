@@ -151,3 +151,119 @@ def band_traces(x, lo, hi, mid, colour, name, hover, opacity=.16):
         go.Scatter(x=x, y=list(mid), mode="lines+markers", name=name, line=dict(color=colour, width=2.2),
                    marker=dict(size=7, color=colour, line=dict(width=1, color="#1a1a19")), text=hover, hoverinfo="text"),
     ]
+
+
+# ------------------------------------------------------------------ the main finding: regression A1
+# The main finding is the A1 regression of notebook 08, not a split of the countries into high and low importers:
+#   y_k = democracy(t + k) - democracy(t - 1) ~ onset + onset:arms_z + arms_z + country and year fixed effects,
+# for k = 1 ... 10. arms_z is the mean arms import of the 5 years before onset, standardised (mean 0, sd 1), so arms
+# imports enter as a continuous number and no cut-off between "high" and "low" importers is needed.
+#   b1 = onset:            the change after an onset for a country with average arms imports
+#   b2 = onset:arms_z:     how much that change differs per standard deviation more arms imports
+#   b1 + b2:               the change for a country importing one sd more arms than average
+# The 95% band of b1 + b2 needs the covariance of b1 and b2; notebook 08 can provide it as the term
+# "onset+onset:arms_z" (e.g. with a linear combination test). Without that term the line is drawn without a band.
+A1_SUM = "onset+onset:arms_z"
+A1_AVG, A1_MORE = "Average arms imports", "One sd more arms imports"
+
+
+def a1_main(res):
+    """One row per horizon k with b1, b2 and b1 + b2 (and their intervals where known); empty without results."""
+    if res is None:
+        return pd.DataFrame()
+    b1, b2 = a1_points(res, "onset"), a1_points(res, "onset:arms_z")
+    if b1.empty:
+        return pd.DataFrame()
+    d = b1[["k", "coef", "ci_low", "ci_high", "n_obs", "n_countries"]].rename(
+        columns={"coef": "b1", "ci_low": "b1_lo", "ci_high": "b1_hi"})
+    d = d.merge(b2[["k", "coef", "ci_low", "ci_high"]].rename(columns={"coef": "b2", "ci_low": "b2_lo", "ci_high": "b2_hi"}),
+                on="k", how="left")
+    s = a1_points(res, A1_SUM)
+    if s.empty:
+        d["sum"], d["sum_lo"], d["sum_hi"] = d["b1"] + d["b2"], float("nan"), float("nan")
+    else:
+        d = d.merge(s[["k", "coef", "ci_low", "ci_high"]].rename(columns={"coef": "sum", "ci_low": "sum_lo", "ci_high": "sum_hi"}),
+                    on="k", how="left")
+        d["sum"] = d["sum"].fillna(d["b1"] + d["b2"])
+    return d.sort_values("k").reset_index(drop=True)
+
+
+def _ci(lo, hi):
+    return "–" if pd.isna(lo) or pd.isna(hi) else f"{sgn(lo)} to {sgn(hi)}"
+
+
+def _clear(lo, hi):
+    return not (pd.isna(lo) or pd.isna(hi)) and (lo > 0 or hi < 0)
+
+
+def a1_sentence(d, k=5):
+    """The main finding in words, at horizon k (or the nearest available)."""
+    if d.empty:
+        return None
+    r = d.iloc[(d["k"] - k).abs().argmin()]
+    k = int(r["k"])
+    yrs = f"{k} year{'s' if k > 1 else ''}"
+    s = (f"{yrs.capitalize()} after a conflict starts, the democracy index of a country with average arms imports has "
+         f"changed by **{sgn(r['b1'])}** (95% CI {_ci(r['b1_lo'], r['b1_hi'])}"
+         f"{'' if _clear(r['b1_lo'], r['b1_hi']) else ', not clearly different from zero'}).")
+    if not pd.isna(r["b2"]):
+        s += (f" Per standard deviation more arms imported in the 5 years before, the change is **{sgn(r['b2'])}** "
+              f"different (95% CI {_ci(r['b2_lo'], r['b2_hi'])}"
+              f"{': a clear difference' if _clear(r['b2_lo'], r['b2_hi']) else ', not clearly different from zero'}), "
+              f"so **{sgn(r['sum'])}** in total for such a country.")
+    return s
+
+
+def a1_chart(d, height=260):
+    """b1 (average arms imports) with its 95% band and b1 + b2 (one sd more), for k = 1 ... 10; one hover per k."""
+    import altair as alt  # local import: this module is also used by pages that draw no Altair chart
+
+    k1 = max(10, int(d["k"].max()))
+    long = pd.concat([
+        d.assign(grp=A1_AVG, coef=d["b1"], lo=d["b1_lo"], hi=d["b1_hi"]),
+        d.assign(grp=A1_MORE, coef=d["sum"], lo=d["sum_lo"], hi=d["sum_hi"]),
+    ])[["k", "grp", "coef", "lo", "hi"]]
+    vals = pd.concat([long["coef"], long["lo"], long["hi"]]).dropna()
+    lo, hi = min(0.0, vals.min()), max(0.0, vals.max())
+    pad = (hi - lo) * .08 or .01
+    ys = alt.Scale(domain=[lo - pad, hi + pad], nice=True, zero=False)
+    xs = alt.Scale(domain=[.5, k1 + .5], nice=False, zero=False)
+    x = alt.X("k:Q", scale=xs, title="Years after the conflict starts",
+              axis=alt.Axis(values=list(range(1, k1 + 1)), format="d", grid=False))
+    y = alt.Y("coef:Q", scale=ys, title="Change in democracy index",
+              axis=alt.Axis(format="+.2f", grid=True, tickCount=5))
+    csc = alt.Scale(domain=[A1_AVG, A1_MORE], range=[ACCENT, HI])
+    colour = alt.Color("grp:N", scale=csc, legend=None)  # the page draws the legend as a text line above the chart
+    dash = alt.StrokeDash("grp:N", scale=alt.Scale(domain=[A1_AVG, A1_MORE], range=[[1, 0], [5, 3]]), legend=None)
+    zero = alt.Chart(pd.DataFrame({"v": [0]})).mark_rule(color=INK2, strokeDash=[4, 4]).encode(y=alt.Y("v:Q", scale=ys))
+    band = alt.Chart(long.dropna(subset=["lo", "hi"])).mark_area(opacity=.16).encode(
+        x=x, y=alt.Y("lo:Q", scale=ys), y2="hi:Q", color=alt.Color("grp:N", scale=csc, legend=None))
+    line = alt.Chart(long).mark_line(strokeWidth=2.2).encode(x=x, y=y, color=colour, strokeDash=dash)
+    dots = alt.Chart(long).mark_circle(size=55, opacity=1, stroke="#1a1a19", strokeWidth=1).encode(
+        x=x, y=y, color=alt.Color("grp:N", scale=csc, legend=None))
+    tips = d.assign(x0=d["k"] - .5, x1=d["k"] + .5,
+                    When=[f"{k} year{'s' if k > 1 else ''} after onset" for k in d["k"]],
+                    Avg=[f"{sgn(b)} (95% CI {_ci(a, c)})" for b, a, c in zip(d["b1"], d["b1_lo"], d["b1_hi"])],
+                    More=[f"{sgn(s)}" + ("" if pd.isna(a) else f" (95% CI {_ci(a, c)})")
+                          for s, a, c in zip(d["sum"], d["sum_lo"], d["sum_hi"])],
+                    Diff=[f"{sgn(b)} (95% CI {_ci(a, c)})" for b, a, c in zip(d["b2"], d["b2_lo"], d["b2_hi"])],
+                    N=[f"{int(n):,} country-years, {int(c):,} countries" for n, c in zip(d["n_obs"], d["n_countries"])])
+    hit = alt.Chart(tips).mark_rect(opacity=0).encode(
+        x=alt.X("x0:Q", scale=xs), x2="x1:Q", y=alt.value(0), y2=alt.value("height"),
+        tooltip=[alt.Tooltip("When:N", title="Horizon"), alt.Tooltip("Avg:N", title=A1_AVG),
+                 alt.Tooltip("More:N", title=A1_MORE), alt.Tooltip("Diff:N", title="Difference per sd (b2)"),
+                 alt.Tooltip("N:N", title="n")])
+    return (alt.layer(zero, band, line, dots, hit).properties(height=height, padding={"left": 4, "right": 8, "top": 4, "bottom": 4})
+            .configure_view(stroke=None).configure(background="transparent", font="IBM Plex Sans, sans-serif")
+            .configure_axis(gridColor=LINE, domainColor=LINE, tickColor=LINE, labelColor=MUTED, titleColor=MUTED,
+                            titleFontWeight="normal", labelFontSize=11, titleFontSize=12)
+            .configure_legend(labelColor=INK2, labelFontSize=12))
+
+
+ci_text = _ci  # public name, used by the World map's "Show the numbers" table
+
+
+def a1_legend():
+    """The legend of a1_chart as a one-line Markdown text (the chart itself draws none)."""
+    items = [(f"{A1_AVG} (b1)", ACCENT, "━"), (f"{A1_MORE} (b1 + b2)", HI, "╍"), ("Band: 95% confidence interval", "#5a5955", "■")]
+    return ":small[" + " ".join(f':color[{sym}]{{foreground="{c}"}} {n.replace(" ", chr(160))}' for n, c, sym in items) + "]"

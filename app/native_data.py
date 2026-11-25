@@ -259,3 +259,26 @@ def load_sup_dem():
     if real.exists():
         return pd.read_csv(real), False
     return pd.read_csv(DEMO / "reg_suppliers.csv"), True
+
+
+@st.cache_data
+def vega_land_shapes():
+    """Country shapes for Vega/Altair geoshape maps: GeoJSON features (lon/lat, about 0.1° precision, rings wound
+    clockwise as d3-geo expects) with the iso3 code at the top level and in properties."""
+    feats = []
+    for ft in country_geojson()["features"]:
+        polys = []
+        for poly in ft["geometry"]["coordinates"]:
+            r = np.round(np.array(poly[0]), 1)
+            r = r[np.r_[True, np.any(np.diff(r, axis=0) != 0, axis=1)]]
+            if len(r) < 4:
+                continue
+            x, yy = r[:, 0], r[:, 1]
+            if (x * np.roll(yy, -1) - np.roll(x, -1) * yy).sum() > 0:
+                r = r[::-1]
+            polys.append([r.tolist()])
+        if polys:
+            iso = ft["properties"]["iso3"]
+            feats.append({"type": "Feature", "iso3": iso, "properties": {"iso3": iso},
+                          "geometry": {"type": "MultiPolygon", "coordinates": polys}})
+    return feats

@@ -34,14 +34,15 @@ UNKNOWN = "unknown supplier(s)"
 NO_BAR = {"displayModeBar": False}
 SC_GUIDE = ("Up = more democratic, right = more arms received (10-year total, log scale). "
             "Moving together is not proof that one drives the other.")
+ROWS_MAX = 24  # more countries than this: the per-country row charts show only the followed countries
 LEGEND_MAX = 10  # more countries than this: no legend, the followed countries stand out instead
 
 panel = nd.load_panel()
 flows = nd.load_flows()
 points = nd.country_points()
 NAMES = panel.drop_duplicates("iso3").set_index("iso3")["country_name"].to_dict()
-GROUPS = nd.country_groups()
 ALL_ISO = sorted(NAMES, key=NAMES.get)
+GROUPS = {"All countries": ALL_ISO, **nd.country_groups()}
 
 # ------------------------------------------------------------------ state
 ss = st.session_state
@@ -237,9 +238,10 @@ def year_ts(y, end=False):
     return datetime(y + 1 if end else y, 1, 1)
 
 
-def year_line(fig, y, dates=False):
+def year_line(fig, y, dates=False, width=1.5):
+    """A vertical line at the year over the whole figure: one shape, also on figures with many subplots."""
     x = datetime(y, 7, 1) if dates else y
-    fig.add_shape(type="line", x0=x, x1=x, xref="x", yref="paper", y0=0, y1=1, line=dict(color=INK, width=1.5))
+    fig.add_shape(type="line", x0=x, x1=x, xref="x", yref="paper", y0=0, y1=1, line=dict(color=INK, width=width))
 
 
 def scroll_box(height_px, limit):
@@ -460,6 +462,7 @@ def one_axis(isos, a, b, same_scale):
     cruns = nd.conflict_runs()
     conf = load_conflicts()
     vmax = max(1.0, d["arms_imports_tiv"].max() if len(d) else 1.0)
+    shapes = []
     for r, iso in enumerate(isos, start=1):
         t = d[d["iso3"] == iso]
         c = conf[conf["iso3"] == iso]
@@ -476,12 +479,15 @@ def one_axis(isos, a, b, same_scale):
         fig.add_trace(go.Scatter(x=t["year"], y=[0] * len(t), mode="markers", marker=dict(opacity=0), customdata=conf_txt,
                                  hovertemplate="%{customdata}<extra>Conflict</extra>", showlegend=False),
                       row=r, col=1, secondary_y=False)
-        for _, cr in cruns[(cruns["iso3"] == iso) & (cruns["end"] >= a) & (cruns["start"] <= b)].iterrows():  # after the traces: Plotly skips empty subplots
-            fig.add_vrect(x0=max(cr["start"], a) - .5, x1=min(cr["end"], b) + .5, row=r, col=1, line_width=0, layer="below",
-                          fillcolor=INK, opacity=.2 if cr["intensity"] == 2 else .07, exclude_empty_subplots=False)
+        y_dom = fig.get_subplot(r, 1).yaxis.domain  # shading as plain shapes, set once below (add_vrect is slow with many rows)
+        for cr in cruns[(cruns["iso3"] == iso) & (cruns["end"] >= a) & (cruns["start"] <= b)].itertuples():
+            shapes.append(dict(type="rect", xref="x", yref="paper", x0=max(cr.start, a) - .5, x1=min(cr.end, b) + .5,
+                               y0=y_dom[0], y1=y_dom[1], line_width=0, layer="below", fillcolor=INK,
+                               opacity=.2 if cr.intensity == 2 else .07))
         top = vmax if same_scale else max(1.0, t["arms_imports_tiv"].max() if len(t) else 1.0)
         fig.update_yaxes(range=[0, 1], tickvals=[0, .5, 1], row=r, col=1, secondary_y=False)
         fig.update_yaxes(range=[0, top * 1.08], showgrid=False, nticks=3, row=r, col=1, secondary_y=True)
+    fig.update_layout(shapes=shapes)
     base_layout(fig, row_h * n + 40, margin=dict(l=0, r=4, t=24 if n > 1 else 8, b=0), bargap=.15, hovermode="x unified")
     fig.update_xaxes(range=[a - .5, b + .5])
     fig.update_yaxes(tickfont=dict(color=MUTED, size=10))
@@ -770,12 +776,21 @@ def body():
     st.caption(f"Regime, democracy index, armed conflict and arms imports, {a}–{b}. Change the year in the sidebar or press Play."
                if single else f"{len(sel)} countries side by side, {a}–{b}: " + ", ".join(names[:8]) + (f" and {len(sel) - 8} more." if len(sel) > 8 else "."))
 
+    # loading bar for big selections (not while playing, where it would flicker every year)
+    bar = st.progress(0, text=f"Loading {len(sel)} countries…") if len(sel) > 8 and not ss["playing"] else None
+
+    def loaded(frac, text):
+        if bar is not None:
+            bar.progress(frac, text=f"Loading {len(sel)} countries: {text}…")
+
     no_data = [i for i in sel if d[d["iso3"] == i]["democracy_index"].notna().sum() == 0]
     if no_data:
         st.info(("No V-Dem data in this period for " + ", ".join(NAMES[i] for i in no_data) + ". ")
                 + ("" if len(no_data) < len(sel) else "The state did not exist then. Try another period."
                    if single else "Try another period."), icon=":material/info:")
         if len(no_data) == len(sel):
+            if bar is not None:
+                bar.empty()
             return
 
     # ---- snapshot of the year
@@ -822,6 +837,7 @@ def body():
                          })
             st.caption("Sorted by democracy index. Click a column header to sort by it.")
 
+    loaded(.15, "scatter")
     # ---- scatter + (compare) democracy index / (single) one axis
     left, right = st.columns([1.35, 1], gap="medium")
     with left, st.container(border=True, height="stretch"):
@@ -860,7 +876,7 @@ def body():
             st.markdown("**Democracy, conflict and arms on one axis**")
             st.caption("Line: democracy index (0–1). Bars: arms imports (TIV, right axis). Shading: war (darker) or minor conflict.")
             fig = one_axis(isos, a, b, False)
-            fig.add_vline(x=y, line=dict(color=INK, width=1.5))
+            year_line(fig, y, width=1.5)
             fig.update_layout(height=470)
             st.plotly_chart(fig, key="cc_axis1", config=NO_BAR)
         else:
@@ -868,9 +884,14 @@ def body():
             st.caption("V-Dem, 0 to 1. " + ("Click a name in the legend to hide it; double-click to show only that country."
                                             if len(isos) <= LEGEND_MAX else "Followed countries stand out; hover a line for its name."))
             fig = democracy_lines(isos, a, b, follow)
-            fig.add_vline(x=y, line=dict(color=INK, width=1.5))
+            year_line(fig, y, width=1.5)
             st.plotly_chart(fig, key="cc_demo", config=NO_BAR)
 
+    # big selections: the per-country rows show only the followed countries
+    rows_isos = isos if len(isos) <= ROWS_MAX else (follow or tuple(largest_importers(isos, a, b, 6)))
+    rows_note = ("" if rows_isos == isos else
+                 f" Showing the {len(rows_isos)} followed countries of {len(isos)}; add more under Follow above.")
+    loaded(.35, "democracy, conflict and arms per country")
     # ---- one axis per country (compare)
     if not single:
         with st.container(border=True):
@@ -879,12 +900,13 @@ def body():
             same = h_r.toggle("Same arms scale for all", key="cc_same_scale",
                               help="Arms bars on one scale for every country instead of one scale per row.")
             st.caption("Line: democracy index (0–1, left axis). Bars: arms imports (TIV, right axis). Shading: war (darker) or minor conflict. "
-                       "Hover a year for the values and the conflicts.")
-            fig = one_axis(isos, a, b, same)
-            fig.add_vline(x=y, line=dict(color=INK, width=1.5))
+                       "Hover a year for the values and the conflicts." + rows_note)
+            fig = one_axis(rows_isos, a, b, same)
+            year_line(fig, y, width=1.5)
             with scroll_box(fig.layout.height, 760):
                 st.plotly_chart(fig, key="cc_axis", config=NO_BAR)
 
+    loaded(.55, "regimes and conflicts")
     # ---- regime + conflicts (side by side for one country; stacked for a comparison, which has many more rows)
     if single:
         left, right = st.columns(2, gap="medium")
@@ -916,20 +938,21 @@ def body():
             if not single:
                 muted_list(f"No armed conflict in {a}–{b}", none)
 
+    loaded(.75, "suppliers")
     # ---- suppliers
     left, right = st.columns([1.5, 1], gap="medium")
     with left, st.container(border=True, height="stretch"):
         st.markdown("**Arms imports by supplier**")
-        st.caption("SIPRI TIV per year, coloured by the largest suppliers of " + ("this country" if single else "these countries") + " in the period.")
-        fig, none, height = supplier_bars(isos, a, b)
+        st.caption("SIPRI TIV per year, coloured by the largest suppliers of " + ("this country" if single else "these countries") + " in the period." + rows_note)
+        fig, none, height = supplier_bars(rows_isos, a, b)
         if fig is None:
             st.info(f"No major arms imports recorded in {a}–{b}.", icon=":material/info:")
         else:
-            fig.add_vline(x=y, line=dict(color=INK, width=1.2))
+            year_line(fig, y, width=1.2)
             with scroll_box(height, 760):
                 st.plotly_chart(fig, key="cc_sup", config=NO_BAR)
             muted_list(f"No major arms imports in {a}–{b}", none)
-            with_imports = [i for i in isos if i not in none]
+            with_imports = [i for i in rows_isos if i not in none]
             with st.expander("Every supplier, year by year", icon=":material/list:"):
                 who = with_imports[0] if len(with_imports) == 1 else st.selectbox(
                     "Country", with_imports, format_func=NAMES.get, key="cc_sup_country")
@@ -952,10 +975,11 @@ def body():
         if fig is None:
             st.info(f"No arms imports to weigh in {a}–{b}.", icon=":material/info:")
         else:
-            fig.add_vline(x=y, line=dict(color=INK, width=1.2))
+            year_line(fig, y, width=1.2)
             st.plotly_chart(fig, key="cc_supdem", config=NO_BAR)
             muted_list("No imports to weigh", missing)
 
+    loaded(.9, "arms flows")
     # ---- arms flows
     with st.container(border=True):
         st.markdown(f"**Arms flows {'of ' + names[0] if single else 'of these countries'} in {y}**")
@@ -977,6 +1001,8 @@ def body():
             with sk_col:
                 st.plotly_chart(flows_sankey(f, cmap), key="cc_sankey", config=NO_BAR)
 
+    if bar is not None:
+        bar.empty()
     # ---- year by year
     with st.expander("Year-by-year table" + ("" if single else "s"), icon=":material/table:"):
         t = year_table(isos, a, b)

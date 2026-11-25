@@ -1,10 +1,10 @@
 """Glossary and FAQ: definitions of the regime types, conflict types, arms measures and methods used on
 the site, and answers to common questions. Native Streamlit only."""
 
+import plotly.graph_objects as go
 import streamlit as st
 
-st.title("Glossary and FAQ")
-st.caption("What the terms on this site mean, where they come from, and answers to common questions.")
+import native_data as nd
 
 # term, category, definition, source
 TERMS = [
@@ -172,30 +172,116 @@ FAQ = [
      "toolbar."),
 ]
 
-# ------------------------------------------------------------------ glossary
-query = st.text_input("Search the glossary", placeholder="e.g. war, TIV, autocracy", label_visibility="collapsed")
+# ------------------------------------------------------------------ layout helpers
+BY_NAME = {t[0]: t for t in TERMS}
+REG_TERMS = ["Closed autocracy", "Electoral autocracy", "Electoral democracy", "Liberal democracy"]
+TYPE_TERMS = ["Extrasystemic conflict", "Interstate conflict", "Intrastate conflict", "Internationalised intrastate conflict"]
+LADDER = ["Minor conflict", "War"]
+SPECIAL = set(REG_TERMS + TYPE_TERMS + LADDER)
+
+
+def term_rows(items):
+    """Terms two per row in bordered columns, so the boxes of one row have the same height."""
+    for i in range(0, len(items), 2):
+        pair = items[i:i + 2]
+        boxes = st.columns(2, border=True, gap="medium") if len(pair) == 2 else [st.container(border=True)]
+        for col, (term, _, definition, source) in zip(boxes, pair):
+            with col:
+                st.markdown(f"**{term}**")
+                st.markdown(definition)
+                st.caption(source)
+
+
+def others(cat):
+    return [t for t in TERMS if t[1] == cat and t[0] not in SPECIAL]
+
+
+panel = nd.load_panel()
+LAST = int(panel["year"].max())
+now = panel[panel["year"] == LAST]
+
+
+def regime_scale():
+    """One stacked bar: countries per regime type in the latest year, in the map colours."""
+    fig = go.Figure()
+    for code, name in enumerate(nd.REGIMES):
+        n = int((now["regime_type"] == code).sum())
+        fig.add_bar(y=[""], x=[n], orientation="h", marker_color=nd.REGIME_COLOURS[name], name=name.capitalize(),
+                    text=f"{name.capitalize()} · {n}", textposition="inside", insidetextanchor="middle",
+                    hovertemplate=f"{name.capitalize()}: {n} countries in {LAST}<extra></extra>")
+    fig.update_layout(barmode="stack", height=64, margin=dict(l=0, r=0, t=0, b=0), showlegend=False,
+                      xaxis=dict(visible=False, range=[0, int(now["regime_type"].notna().sum())]), yaxis=dict(visible=False),
+                      paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                      uniformtext=dict(minsize=11, mode="hide"), font=dict(color="#f0efec"))
+    return fig
+
+
+# ------------------------------------------------------------------ page
+st.title("Glossary and FAQ")
+query = st.text_input("Search", placeholder="Search terms and questions, e.g. war, TIV, autocracy",
+                      icon=":material/search:", label_visibility="collapsed")
 q = query.strip().lower()
-shown = [t for t in TERMS if not q or q in t[0].lower() or q in t[2].lower()]
 
-st.subheader("Glossary")
-if not shown:
-    st.info(f"No term matches “{query}”.")
-for cat in dict.fromkeys(t[1] for t in TERMS):
-    items = [t for t in shown if t[1] == cat]
-    if not items:
-        continue
-    st.markdown(f"#### {cat}")
-    cols = st.columns(2)
-    for i, (term, _, definition, source) in enumerate(items):
-        with cols[i % 2].container(border=True):
-            st.markdown(f"**{term}**")
-            st.write(definition)
-            st.caption(source)
+if q:
+    hits = [t for t in TERMS if q in t[0].lower() or q in t[2].lower()]
+    faq_hits = [f for f in FAQ if q in f[0].lower() or q in f[1].lower()]
+    st.caption(f"{len(hits)} terms and {len(faq_hits)} questions match “{query}”.")
+    if not hits and not faq_hits:
+        st.info("Nothing matches. Try a shorter word.", icon=":material/search_off:")
+    term_rows(hits)
+    for question, answer in faq_hits:
+        with st.expander(question, icon=":material/help:"):
+            st.markdown(answer)
+    st.stop()
 
-# ------------------------------------------------------------------ FAQ
-st.subheader("Frequently asked questions")
-for question, answer in FAQ:
-    if q and q not in question.lower() and q not in answer.lower():
-        continue
-    with st.expander(question):
-        st.write(answer)
+t_reg, t_con, t_arms, t_meth, t_map, t_faq = st.tabs(
+    [":material/how_to_vote: Political regimes", ":material/crisis_alert: Armed conflict",
+     ":material/flight: Arms transfers", ":material/functions: Methods", ":material/map: Map and data",
+     ":material/help: FAQ"])
+
+with t_reg:
+    st.caption(f"V-Dem sorts every country-year into one of four regime types, from least to most democratic. "
+               f"The bar shows how many countries had each type in {LAST}; the colours are those of the World map.")
+    st.plotly_chart(regime_scale(), config={"displayModeBar": False, "staticPlot": True}, key="g_scale")
+    for col, name in zip(st.columns(4, border=True), REG_TERMS):
+        with col:
+            st.markdown(f"**{name}**")
+            st.markdown(BY_NAME[name][2])
+    term_rows(others("Political regimes"))
+
+with t_con:
+    st.caption("UCDP counts battle-related deaths per conflict and year. The number of deaths decides whether a "
+               f"conflict is recorded at all and whether it is a war. Countries in {LAST}:")
+    minor = int(((now["conflict_active"] == 1) & (now["max_intensity"] == 1)).sum())
+    war = int((now["max_intensity"] == 2).sum())
+    none_ = int(len(now) - minor - war)
+    a, b, c = st.columns(3, border=True)
+    a.metric("Below 25 deaths", f"{none_} countries", help="No armed conflict recorded by UCDP")
+    a.caption("Not recorded as armed conflict")
+    b.metric("Minor conflict · 25–999", f"{minor} countries")
+    b.caption(BY_NAME["Minor conflict"][2])
+    c.metric("War · 1,000+", f"{war} countries")
+    c.caption(BY_NAME["War"][2])
+    st.markdown("##### Types of conflict")
+    for col, name in zip(st.columns(4, border=True), TYPE_TERMS):
+        with col:
+            st.markdown(f"**{name}**")
+            st.markdown(BY_NAME[name][2])
+            st.caption(BY_NAME[name][3])
+    st.markdown("##### Other terms")
+    term_rows(others("Armed conflict"))
+
+with t_arms:
+    term_rows(others("Arms transfers"))
+
+with t_meth:
+    term_rows(others("Methods"))
+
+with t_map:
+    term_rows(others("Map and data"))
+
+with t_faq:
+    left, right = st.columns(2, gap="medium")
+    for i, (question, answer) in enumerate(FAQ):
+        with (left if i % 2 == 0 else right).expander(question):
+            st.markdown(answer)

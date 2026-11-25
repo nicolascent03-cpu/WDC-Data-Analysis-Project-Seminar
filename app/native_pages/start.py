@@ -64,10 +64,10 @@ with left:
     with st.container(horizontal=True):
         if st.button("Explore the world map", type="primary", icon=":material/public:"):
             st.switch_page(WORLD_MAP)
-        if st.button("Open a country timeline", icon=":material/timeline:"):
-            st.switch_page(COMPARE)
         if st.button("See the main finding", icon=":material/insights:"):
             st.switch_page(FINDINGS)
+        if st.button("Open a country timeline", icon=":material/timeline:"):
+            st.switch_page(COMPARE)
     st.space("small")
     st.pills("Or jump straight to a group of countries:", START_GROUPS, key="start_group", on_change=group_chosen,
              wrap=True)
@@ -75,9 +75,15 @@ with left:
 with right:
     y, g = latest_year()
     with st.container(border=True):
-        head_l, head_r = st.columns([3, 1.3], vertical_alignment="bottom")
+        head_l, head_r = st.columns([3, 1.6], vertical_alignment="center")
         head_l.markdown(f"**Regimes of the world in {y}**")
-        head_r.caption("Preview · latest year")
+        with head_r.container(horizontal=True, horizontal_alignment="right"):
+            if st.button("Open on the map", icon=":material/arrow_forward:", type="tertiary", key="start_open_map",
+                         help=f"Open the World map at {y}"):
+                ss["year"] = y
+                ss["playing"] = False
+                ss["wm_period"] = "1950–2025"  # so the year is inside the map's period
+                st.switch_page(WORLD_MAP)
         st.plotly_chart(preview_map(y), config={"displayModeBar": False, "scrollZoom": False}, key="start_map")
         m = st.columns(4)
         m[0].metric("Countries with data", int(g["regime_type"].notna().sum()))
@@ -101,5 +107,6 @@ for col, (num, title, text, go_label, icon, page) in zip(st.columns(3), STEPS):
         st.markdown(f":primary[{icon} **{num}**]")
         st.markdown(f"#### {title}")
         st.markdown(text)
+        st.space("stretch")  # the links of the three cards line up at the bottom
         if st.button(go_label, icon=":material/arrow_forward:", key=f"step_{num}", type="tertiary"):
             st.switch_page(page)

@@ -27,7 +27,7 @@ PERIODS = {"1950–2025": (1950, 2025), "Cold War": (1950, 1991), "Since 1992": 
 SPEEDS = {"0.5×": 0.5, "1×": 1.0, "2×": 2.0}
 PACE = {"Regimes": 0.6, "Arms flows": 1.5, "Arms build-up": 1.0}  # seconds per year at 1×, calmer for the busier maps
 MAP_H = 330           # map height; the whole map card fits a 1440 × 900 screen
-SIDE_H = MAP_H + 34   # side panel: as tall as the map plus its legend line
+SIDE_H = MAP_H + 50   # side panel: as tall as the map plus its legend line
 COMPARE = "native_pages/compare.py"
 TIV_NOTE = ("SIPRI trend-indicator values (TIV) measure military capability transferred, not money. "
             "Historical states are drawn at today's borders (Soviet Union at Russia).")
@@ -122,7 +122,8 @@ speed = ss["wm_speed"] if ss.get("wm_speed") in SPEEDS else "1×"
 
 # ------------------------------------------------------------------ sidebar: options of the mode, then the country card
 with st.sidebar:
-    st.markdown("**Map options**")
+    if mode != "Arms build-up":  # build-up has no options of its own
+        st.markdown("**Map options**")
     show_conflict, top_n, share, tint, highlight = True, 25, False, True, None
     if mode == "Regimes":
         show_conflict = st.toggle("Stripe countries with armed conflict", value=True, key="wm_stripes")
@@ -134,7 +135,8 @@ with st.sidebar:
         highlight = st.selectbox("Highlight a supplier", SUP_ORDER[:-1], index=None, key="wm_highlight",
                                  placeholder="All suppliers")
         tint = st.toggle("Tint countries by main supplier (last 5 years)", value=True, key="wm_tint")
-    st.divider()
+    if mode != "Arms build-up":
+        st.divider()
     card_iso = st.selectbox("Country details", sorted(NAMES, key=NAMES.get), index=None, key="wm_card_iso",
                             format_func=NAMES.get, placeholder="Search a country")
     st.caption("Or click a country on the map.")
@@ -389,7 +391,7 @@ def country_card(iso, y):
     exp = f[(f["supplier_iso3"] == iso)].groupby("recipient_iso3")["tiv"].sum().sort_values(ascending=False)
     a, b = st.columns(2)
     if mode == "Arms build-up":
-        a.metric(f"Received {y - 9}–{y}", fmt(nd.arms_rolling_hosted().loc[y].get(iso, 0)), help="TIV of major arms received in 10 years")
+        a.metric("Received in 10 years", fmt(nd.arms_rolling_hosted().loc[y].get(iso, 0)), help=f"TIV of major arms received {y - 9}–{y}")
         b.metric(f"Imports {y}", fmt(imp_total), help="TIV")
     else:
         a.metric(f"Imports {y}", fmt(imp_total), help="TIV of major arms received")
@@ -510,8 +512,15 @@ def map_card():
         with right:
             with st.container(height=SIDE_H, border=False):
                 if mode == "Arms flows":
-                    side_header(f"Who supplied whom in {y}", "Hover a country, click to pin its card")
-                    chord_ring(y, pinned=ss.get("wm_pin"), height=SIDE_H - 64, key="wm_chord",
+                    pin = ss.get("wm_pin") or ""
+                    pin_iso = pin[2:] if pin.startswith("r:") else nd.SUPPLIER_ISO.get(pin[2:]) if pin.startswith("s:") else None
+                    if pin_iso in NAMES:  # a pinned country: its card can open the compare page
+                        st.markdown(f"**Who supplied whom in {y}**")
+                        st.button(f"Open {NAMES[pin_iso]} in Countries & compare", icon=":material/compare_arrows:",
+                                  type="tertiary", key="wm_pin_cmp", on_click=open_in_compare, args=(pin_iso,))
+                    else:
+                        side_header(f"Who supplied whom in {y}", "Hover a country, click to pin its card")
+                    chord_ring(y, pinned=ss.get("wm_pin"), height=SIDE_H - 94, key="wm_chord",
                                tween_ms=int(min(800, 700 * PACE[mode] / SPEEDS[speed])), on_pin=chord_pin, on_close=chord_close)
                 elif card_iso is not None:
                     country_card(card_iso, y)
@@ -523,21 +532,19 @@ def map_card():
                     a.metric("With armed conflict", int(g["conflict_active"].sum()), help="Countries with an active armed conflict (25+ battle deaths)")
                     b.metric("Of them at war", int((g["max_intensity"] == 2).sum()), help="1,000+ battle deaths in the year")
                 else:
-                    side_header(f"Largest build-ups, {y - 9}–{y}", "TIV received in 10 years · click a row for its card")
+                    side_header(f"Largest build-ups, {y - 9}–{y}", "TIV received in 10 years")
                     v = nd.arms_rolling_hosted().loc[y]
                     top = v[v > 0].nlargest(10)
                     ss["_wm_bld_top"] = list(top.index)
-                    reg = nd.regime_grid().loc[y]
                     if top.empty:
                         st.info(f"No major arms received in {y - 9}–{y}.", icon=":material/info:")
                     else:
                         t = pd.DataFrame({"#": range(1, len(top) + 1), "Country": [NAMES.get(i, i) for i in top.index],
-                                          "Regime": [REG_LABELS[int(reg[i])] if pd.notna(reg.get(i)) else "No data" for i in top.index],
                                           "TIV": top.values})
-                        st.dataframe(t, hide_index=True, height=35 * len(t) + 38, key="bld_top", on_select=buildup_row_clicked,
-                                     selection_mode="single-row", column_config={
+                        st.dataframe(t, hide_index=True, height=28 * len(t) + 32, row_height=28, key="bld_top",
+                                     on_select=buildup_row_clicked, selection_mode="single-row", column_config={
                                          "#": st.column_config.NumberColumn("#", width=28),
-                                         "TIV": st.column_config.ProgressColumn("TIV", format="%,.0f", min_value=0,
+                                         "TIV": st.column_config.ProgressColumn("TIV", format="%,.0f", min_value=0, width="medium",
                                                                                 max_value=float(top.max()))})
 
         # river of time: click a year to jump there
@@ -619,9 +626,10 @@ def numbers(y):
     else:
         rc = regime_counts().loc[y]
         tot = rc.sum()
-        rows = [(REG_LABELS[r], int(rc.get(r, 0)), pct(rc.get(r, 0), tot)) for r in (3, 2, 1, 0)]
-        rows.append(("All countries with data", int(tot), "100%"))
-        st.table(pd.DataFrame(rows, columns=[f"Regime type, {y}", "Countries", "Share"]).set_index(f"Regime type, {y}"))
+        rows = [(REG_LABELS[r], int(rc.get(r, 0)), rc.get(r, 0) / tot * 100 if tot else 0) for r in (3, 2, 1, 0)]
+        rows.append(("All countries with data", int(tot), 100.0))
+        st.dataframe(pd.DataFrame(rows, columns=[f"Regime type, {y}", "Countries", "Share"]), hide_index=True,
+                     column_config={"Share": st.column_config.NumberColumn(format="%.0f%%")})
 
 
 map_card()
@@ -645,7 +653,8 @@ def finding_chart():
                        font=dict(color=INK2, size=12))
     nr.layout(fig, 330, hovermode="x unified", showlegend=True, margin=dict(l=8, r=8, t=36, b=8),
               legend=dict(orientation="h", x=0, y=1.02, yanchor="bottom", font=dict(color=INK2)))
-    fig.update_xaxes(title="Years relative to conflict onset", dtick=5, tickformat="+d", showgrid=False, range=[-10.5, 10.5])
+    fig.update_xaxes(title="Years relative to conflict onset", tickvals=[-10, -5, 0, 5, 10],
+                     ticktext=["−10", "−5", "0", "+5", "+10"], showgrid=False, range=[-10.5, 10.5])
     fig.update_yaxes(tickformat="+.2f", zeroline=True, zerolinecolor=INK2)
     return fig
 

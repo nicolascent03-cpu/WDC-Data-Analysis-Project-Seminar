@@ -360,7 +360,7 @@ def sc_prep(d, ax):
 
 def sc_axes(ax):
     lo, hi = ax["range"]
-    label = " : ".join(f"abs(datum.value - {v!r}) < {v * 1e-6!r} ? '{t}'" for v, t in zip(ax["tickvals"], ax["ticktext"])) + " : ''"
+    label = " : ".join(f"abs(datum.value - {float(v)!r}) < {float(v) * 1e-6!r} ? '{t}'" for v, t in zip(ax["tickvals"], ax["ticktext"])) + " : ''"
     x = alt.X("x:Q", scale=alt.Scale(type="log", domain=[10 ** lo, 10 ** hi], clamp=True, nice=False),
               axis=alt.Axis(values=list(ax["tickvals"]), labelExpr=label, title="Arms received in the previous 10 years (TIV, log scale)",
                             titleColor=MUTED, titleFontWeight="normal", grid=True, gridColor=LINE, labelColor=INK2))

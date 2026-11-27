@@ -24,6 +24,11 @@ Every notebook and app file uses exactly these names for tables and files that a
 | `panel.csv` | 05 | 06, 07, app |
 | `event.csv` | 06 | 06 Part C |
 | `event_time.csv` | 06 | 07, app |
+    reg_panel.csv	08	08
+    reg_eventstudy.csv	08	app
+    sipri_flows.csv	08	08 (app later)
+    reg_suppliers.csv	08	app
+    reg_results.csv	08	app
 
 ## Dataframes
 

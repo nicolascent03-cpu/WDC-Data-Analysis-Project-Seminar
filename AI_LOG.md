@@ -61,3 +61,5 @@ Add a line every time you use AI for the project, in your own words, on the same
 #25.11.2026: Last week i finished coding all the analysis functions by hand that will create the plots for the website, i needed to use a bit of ai at first but eventually was able to write the plots by myself. 
 we decided to add regressions to the project, so i started doing them. I needed a lot of AI for Part A of the regression notebook, as it was the first time i did them in python(only in R before). 
 I managed to finish a part of the regressions but not on my own.
+
+#27.11.2026: Today i finished the last regression we need and created the full suppier table for each country, not just the top 3. I had to rely on AI quite a lot but i understood what he did in terms of regression. All in all more AI use than i planned.

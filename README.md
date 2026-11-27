@@ -44,11 +44,11 @@ nbstripout --install
 2. **Compared with countries without a conflict onset, there is no clear change, and arms imports make no clear difference.** With country and year fixed effects (notebook 08), the change five years after onset is −0.006 (95% CI −0.021 to 0.010), and one standard deviation more arms imports before onset goes with +0.011 (95% CI −0.003 to 0.025). The gap between high and low importers in 06 reverses when we keep only wars or only first onsets.
 3. **Who supplied the arms makes no clear difference either.** Arms from democratic rather than autocratic suppliers in the five years before onset go with −0.005 after five years (95% CI −0.063 to 0.053) and −0.037 after ten years (95% CI −0.118 to 0.044).
 
-These results show patterns, not causes: arms imports and suppliers are not assigned at random, the confidence intervals are wide, historical states are mapped onto today's countries, and TIV measures military capability, not money.
+These results show patterns: arms imports and suppliers are not assigned at random, the confidence intervals are wide, historical states are mapped onto today's countries, and TIV measures military capability.
 
 ## Bonus feature
 
-**Regression analysis (notebook 08).** We estimate how the democracy index changes 1 to 10 years after a conflict onset compared with countries without an onset, using panel regressions with country and year fixed effects and standard errors clustered by country. The models include an interaction with pre-onset arms imports, a stacked event study that checks the years before onset, and a model with the democracy of the arms suppliers. This goes beyond the raw averages of notebook 06: it separates the conflict from the worldwide trend towards democracy, and its results are what the app's Findings page shows.
+**Regression analysis (notebook 08).** We estimate how the democracy index changes 1 to 10 years after a conflict onset compared with countries without an onset, using panel regressions with country and year fixed effects and standard errors clustered by country. The models include an interaction with pre-onset arms imports, a stacked event study that checks the years before onset, and a model with the democracy of the arms suppliers. This goes beyond the raw averages of notebook 06: it separates the conflict from the worldwide trend towards democracy.
 
 ## AI use
 

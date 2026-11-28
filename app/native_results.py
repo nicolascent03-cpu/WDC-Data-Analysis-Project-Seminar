@@ -249,8 +249,8 @@ def a1_chart(d, height=260):
     return (alt.layer(zero, band, line, dots, hit).properties(height=height, padding={"left": 4, "right": 8, "top": 4, "bottom": 4})
             .configure_view(stroke=None).configure(background="transparent", font="IBM Plex Sans, sans-serif")
             .configure_axis(gridColor=LINE, domainColor=LINE, tickColor=LINE, labelColor=MUTED, titleColor=MUTED,
-                            titleFontWeight="normal", labelFontSize=11, titleFontSize=12)
-            .configure_legend(labelColor=INK2, labelFontSize=12))
+                            titleFontWeight="normal", labelFontSize=7.7, titleFontSize=8.4)
+            .configure_legend(labelColor=INK2, labelFontSize=8.4))
 
 
 ci_text = _ci  # public name, used by the World map's "Show the numbers" table

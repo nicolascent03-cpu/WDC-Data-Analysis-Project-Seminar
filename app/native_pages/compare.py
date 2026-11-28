@@ -252,15 +252,15 @@ def vl_finish(chart, timeline=False, right_axis=False):
                  .configure_axisRight(minExtent=AX_R, maxExtent=AX_R))
     return (chart
             .configure_axis(gridColor=LINE, domainColor=LINE, tickColor=LINE, labelColor=MUTED, titleColor=MUTED,
-                            titleFontWeight="normal", labelFontSize=11, titleFontSize=12)
-            .configure_legend(labelColor=INK2, titleColor=MUTED, labelFontSize=11, labelLimit=170)
-            .configure_title(color=INK, fontSize=12, fontWeight="normal", anchor="start", offset=4))
+                            titleFontWeight="normal", labelFontSize=7.7, titleFontSize=8.4)
+            .configure_legend(labelColor=INK2, titleColor=MUTED, labelFontSize=7.7, labelLimit=170)
+            .configure_title(color=INK, fontSize=8.4, fontWeight="normal", anchor="start", offset=4))
 
 
 def left_title(text, colour=INK2):
     """An axis title set horizontally at the top of the left label column, as the row labels of the HTML version."""
     return dict(title=text, titleAngle=0, titleAlign="left", titleBaseline="top", titleX=-AX_L, titleY=0,
-                titleColor=colour, titleFontWeight=500, titleFontSize=12, titleLimit=AX_L - 8)
+                titleColor=colour, titleFontWeight=500, titleFontSize=8.4, titleLimit=AX_L - 8)
 
 
 def year_ticks(a, b, step=None):
@@ -408,7 +408,7 @@ PICK = alt.selection_point(name="pick", fields=["year", "iso3"], on="click", emp
 def watermark(y):
     """The year in big faint digits behind the scatter, as in the HTML version."""
     return alt.Chart(pd.DataFrame({"t": [0]})).mark_text(
-        x=alt.expr("width / 2"), y=alt.expr("height / 2"), text=str(y), fontSize=110, fontWeight=600, color=INK,
+        x=alt.expr("width / 2"), y=alt.expr("height / 2"), text=str(y), fontSize=77, fontWeight=600, color=INK,
         opacity=.06, baseline="middle", align="center")
 
 
@@ -523,10 +523,10 @@ def scatter_single(iso, a, b, y, full):
         .encode(x, yy, size=alt.Size("size:Q", scale=None), strokeWidth=alt.StrokeWidth("ring:Q", scale=None),
                 opacity=alt.Opacity("op:Q", scale=None), order="year:Q", tooltip=TT)
         .add_params(PICK),
-        alt.Chart(dec).mark_text(align="left", dx=6, dy=-8, color=MUTED, fontSize=11).encode(x, yy, text="year:N"),
+        alt.Chart(dec).mark_text(align="left", dx=6, dy=-8, color=MUTED, fontSize=7.7).encode(x, yy, text="year:N"),
         alt.Chart(now).mark_point(filled=True, color=c, size=330, stroke=INK,
                                   strokeWidth=max(1.5, RING[int(now["intensity"].iloc[0])]) if len(now) else 1.5).encode(x, yy),
-        alt.Chart(now).mark_text(dy=-18, color=INK, fontSize=13, fontWeight=600).encode(x, yy, text="year:N"),
+        alt.Chart(now).mark_text(dy=-18, color=INK, fontSize=9.1, fontWeight=600).encode(x, yy, text="year:N"),
     ]
     return sc_finish(layers), ax["any_zero"]
 
@@ -564,8 +564,8 @@ def scatter_compare(isos, a, b, y, follow, full, whole=False):
         .encode(x, yy, colour, size=alt.Size("size:Q", scale=None), strokeWidth=alt.StrokeWidth("ring:Q", scale=None),
                 opacity=alt.Opacity("op:Q", scale=None), order="z:Q", tooltip=TT)
         .add_params(PICK),
-        alt.Chart(lab[lab["side"] == "right"]).mark_text(align="left", dx=12, color=INK, fontSize=12).encode(x, yy, text="label:N"),
-        alt.Chart(lab[lab["side"] == "left"]).mark_text(align="right", dx=-12, color=INK, fontSize=12).encode(x, yy, text="label:N"),
+        alt.Chart(lab[lab["side"] == "right"]).mark_text(align="left", dx=12, color=INK, fontSize=8.4).encode(x, yy, text="label:N"),
+        alt.Chart(lab[lab["side"] == "left"]).mark_text(align="right", dx=-12, color=INK, fontSize=8.4).encode(x, yy, text="label:N"),
     ]
     return sc_finish(layers), ax["any_zero"]
 
@@ -678,7 +678,7 @@ def regime_chart(isos, a, b):
     bars = alt.Chart(s).mark_bar(height=alt.RelativeBandSize(.75)).encode(
         yr_x("x0", a, b), x2="x1:Q",
         y=alt.Y("Country:N", sort=order, scale=alt.Scale(domain=order),
-                axis=alt.Axis(title=None, labelColor=INK, ticks=False, domain=False, labelFontSize=12, labelAlign="left",
+                axis=alt.Axis(title=None, labelColor=INK, ticks=False, domain=False, labelFontSize=8.4, labelAlign="left",
                               labelPadding=AX_L - 8)),
         color=alt.Color("Regime:N", scale=alt.Scale(domain=regs, range=[nd.REGIME_COLOURS[r] for r in nd.REGIMES]),
                         legend=alt.Legend(orient="top", direction="horizontal", title=None, columns=4 if len(isos) > 1 else 2,
@@ -722,7 +722,7 @@ def range_rows(df, rows, a, b, colour, tooltip):
     the HTML version, every other row is shaded and the row's total ("right") stands at the right end."""
     step = 20 if b - a > 50 else 10
     y = alt.Y("row:N", sort=rows, scale=alt.Scale(domain=rows, paddingInner=0, paddingOuter=0),
-              axis=alt.Axis(title=None, labelColor=INK, ticks=False, domain=False, labelFontSize=11, labelAlign="left",
+              axis=alt.Axis(title=None, labelColor=INK, ticks=False, domain=False, labelFontSize=7.7, labelAlign="left",
                             labelPadding=AX_L - 8))
     zebra = pd.DataFrame({"row": rows[::2], "x0": a - .5, "x1": b + .5})
     totals = df.drop_duplicates("row")[["row", "right"]].assign(x=b + .5)
@@ -734,7 +734,7 @@ def range_rows(df, rows, a, b, colour, tooltip):
         alt.Chart(totals).mark_point(opacity=0).encode(
             x=alt.X("x:Q"),
             y=alt.Y("row:N", sort=rows, scale=alt.Scale(domain=rows, paddingInner=0, paddingOuter=0),
-                    axis=alt.Axis(orient="right", title=None, ticks=False, domain=False, labelColor=MUTED, labelFontSize=11,
+                    axis=alt.Axis(orient="right", title=None, ticks=False, domain=False, labelColor=MUTED, labelFontSize=7.7,
                                   labelAlign="right", labelPadding=AX_R - 8,
                                   labelExpr=f"{json.dumps(dict(zip(totals['row'], totals['right'])))}[datum.value] || ''"))),
         year_rule(1.2),
@@ -876,7 +876,7 @@ def supplier_charts(isos, a, b, height):
     ly = alt.Y("r:O", axis=None)
     legend = vl_finish(alt.layer(
         alt.Chart(leg).mark_square(size=90, opacity=1).encode(lx, ly, color=alt.Color("Supplier:N", scale=supplier_colour_scale(cmap), legend=None)),
-        alt.Chart(leg).mark_text(align="left", dx=10, color=INK2, fontSize=12, limit=170).encode(lx, ly, text="Supplier:N"),
+        alt.Chart(leg).mark_text(align="left", dx=10, color=INK2, fontSize=8.4, limit=170).encode(lx, ly, text="Supplier:N"),
     ).properties(height=22 * leg["r"].nunique()))
     charts = []
     for iso in has:
@@ -1065,7 +1065,7 @@ def sankey_chart(isos, y, a, b):
     nodes, bands = sankey_data(isos, y)
     if nodes is None:  # no deliveries this year: a chart all the same (an element that comes and goes would flicker)
         return vl_finish(alt.Chart(pd.DataFrame({"t": [f"No deliveries in {y}"]})).mark_text(
-            color=MUTED, fontSize=13, align="center", baseline="middle", x=alt.expr("width / 2"), y=alt.expr("height / 2"))
+            color=MUTED, fontSize=9.1, align="center", baseline="middle", x=alt.expr("width / 2"), y=alt.expr("height / 2"))
             .encode(text="t:N").properties(height=SK_H))
     nodes = nodes.assign(col=[flow_colour(n, cmap) if s == "s" else INK2 for n, s in zip(nodes["node"], nodes["side"])],
                          x0=np.where(nodes["side"] == "s", -.035, 1.0), x1=np.where(nodes["side"] == "s", 0.0, 1.035),
@@ -1079,9 +1079,9 @@ def sankey_chart(isos, y, a, b):
         alt.Chart(bands).mark_area(opacity=.35).encode(x, yy, y2="hi:Q", detail="lid:N", color=alt.Color("col:N", scale=None), tooltip=tip),
         alt.Chart(nodes).mark_rect().encode(alt.X("x0:Q", scale=xs, axis=None), x2="x1:Q", y=ny, y2="y1:Q",
                                             color=alt.Color("col:N", scale=None), tooltip=tip),
-        alt.Chart(nodes[nodes["side"] == "s"]).mark_text(align="left", dx=4, color=INK, fontSize=11).encode(
+        alt.Chart(nodes[nodes["side"] == "s"]).mark_text(align="left", dx=4, color=INK, fontSize=7.7).encode(
             alt.X("x1:Q", scale=xs, axis=None), alt.Y("mid:Q", scale=ys, axis=None), text="node:N"),
-        alt.Chart(nodes[nodes["side"] == "r"]).mark_text(align="right", dx=-4, color=INK, fontSize=11).encode(
+        alt.Chart(nodes[nodes["side"] == "r"]).mark_text(align="right", dx=-4, color=INK, fontSize=7.7).encode(
             alt.X("x0:Q", scale=xs, axis=None), alt.Y("mid:Q", scale=ys, axis=None), text="node:N"),
     ]
     return vl_finish(alt.layer(*layers).properties(height=SK_H))
@@ -1125,7 +1125,7 @@ def body():
 
     # the year bar, pinned to the bottom of the screen (st.bottom) so it stays in reach while scrolling: Play, speed,
     # year and period (the slider follows Play). The fragment writes there on every run, the full one included.
-    with st.bottom, st.container(horizontal=True, vertical_alignment="center", gap="medium", wrap=False):  # one line: the slider shrinks instead
+    with st.bottom, st.container(horizontal=True, vertical_alignment="center", gap="medium"):
         st.button("Pause" if ss["playing"] else "Play", icon=":material/pause:" if ss["playing"] else ":material/play_arrow:",
                   type="primary", on_click=toggle_play, key="cc_play", help="Play through the years of the period.")
         st.segmented_control("Speed", list(SPEEDS), key="cc_speed", required=True, on_change=full_rerun,

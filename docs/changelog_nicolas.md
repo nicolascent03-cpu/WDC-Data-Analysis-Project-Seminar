@@ -24,6 +24,18 @@ the Streamlit app.
 
 **Why:** "how to run it on streamlit cloud", "is the newest version the one in github?" and "Yes, do all three" (pull Yair's results, check the app with them, then push).
 
+**Later the same day:**
+- **Final wording:**
+  - The app no longer calls itself a prototype or the results preliminary.
+  - The README findings lead with the event-study result, with no high vs low importer split.
+  - The README points to the final app files.
+  - Why: "what is there still to do to finish the website so the presentaion and document can be written" and "fix all".
+- **Default size:** the whole app now looks at 100% the way it looked at 67% browser zoom.
+  - The base font is 11 px instead of 16, with headings, numbers and corner radii scaled the same way.
+  - All text inside the charts and the chord ring is scaled to 70%.
+  - The year bars wrap again on narrow screens instead of squeezing the slider.
+  - Why: "when i run it now its so small and i resize to 67% for a nice view, change that to default sizing"
+
 ## 2026-11-25 · Real regression results, no more high vs low importers
 
 **Commit `d7e07d6`:** Findings shows the real Part A results of notebook 08.

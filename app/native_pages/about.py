@@ -332,7 +332,7 @@ def regime_scale():
     bars = alt.Chart(d).mark_bar(height=28, cornerRadius=3, stroke="#111110", strokeWidth=2).encode(
         x, x2="x1:Q", color=colour,
         tooltip=[alt.Tooltip("Regime:N"), alt.Tooltip("n:Q", title=f"Countries in {LAST}")])
-    text = alt.Chart(d).mark_text(color="#f0efec", fontSize=11, fontWeight=500).encode(
+    text = alt.Chart(d).mark_text(color="#f0efec", fontSize=7.7, fontWeight=500).encode(
         alt.X("mid:Q", scale=alt.Scale(domain=[0, total], nice=False), axis=None), text="label:N")
     return (alt.layer(bars, text).properties(height=30)
             .configure_view(stroke=None).configure(background="transparent", font="IBM Plex Sans, sans-serif"))

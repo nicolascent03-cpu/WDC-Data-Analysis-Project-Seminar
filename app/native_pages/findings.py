@@ -62,8 +62,8 @@ def finish(chart, height):
     """Transparent, IBM Plex, no frame: the look of the Altair charts of the other pages."""
     return (chart.properties(height=height).configure_view(stroke=None)
             .configure(background="transparent", font=FONT)
-            .configure_axis(labelColor=nr.MUTED, titleColor=nr.MUTED, titleFontWeight="normal", labelFontSize=11,
-                            titleFontSize=11, domain=False, ticks=False, gridColor=nr.LINE, labelFont=MONO))
+            .configure_axis(labelColor=nr.MUTED, titleColor=nr.MUTED, titleFontWeight="normal", labelFontSize=7.7,
+                            titleFontSize=7.7, domain=False, ticks=False, gridColor=nr.LINE, labelFont=MONO))
 
 
 def hover_columns(tips, x0, x1, tooltip, height_px=None):
@@ -159,7 +159,7 @@ def es_chart(groups):
     start = alt.Chart(pd.DataFrame({"t": [0]})).mark_rule(color=nr.INK2, strokeWidth=1.2).encode(
         x=alt.X("t:Q", scale=xsc), y=alt.value(-6), y2=alt.value("height"))
     labels = alt.layer(*[alt.Chart(pd.DataFrame({"t": [tx]})).mark_text(
-        text=txt, align="left", baseline="bottom", dx=6, dy=-9, fontSize=12, fontWeight=w, color=c).encode(
+        text=txt, align="left", baseline="bottom", dx=6, dy=-9, fontSize=8.4, fontWeight=w, color=c).encode(
         x=alt.X("t:Q", scale=xsc), y=alt.value(0))
         for tx, txt, w, c in [(0, "Conflict starts", 600, nr.INK), (t0 - .5, "Before: should be near zero", 400, nr.INK2)]])
     band = alt.Chart(d).mark_area(opacity=.16 if len(groups) == 1 else .12).encode(
@@ -325,7 +325,7 @@ def forest(rows):
     y = alt.Y("i:O", axis=None, scale=ysc)
     # the plot starts LW px from the left: the labels live in that first column, inside the chart
     xs = alt.Scale(domain=[lo, hi], nice=False, zero=False, range=[LW, alt.ExprRef("width")])
-    xa = alt.Axis(values=ticks, labelExpr=signed(dec), title=None, grid=False, labelFontSize=10)
+    xa = alt.Axis(values=ticks, labelExpr=signed(dec), title=None, grid=False, labelFontSize=7)
     colour = alt.Color("sig:N", legend=None, scale=alt.Scale(domain=[True, False], range=[nr.ACCENT, nr.INK2]))
     stripes = alt.Chart(d[d["stripe"]]).mark_rect(color=SURFACE).encode(
         x=alt.value(0), x2=alt.value("width"), y=y)
@@ -338,9 +338,9 @@ def forest(rows):
         color=colour)
     dots = alt.Chart(d).mark_circle(size=90, opacity=1, stroke=SURFACE, strokeWidth=1.5).encode(
         x=alt.X("coef:Q", scale=xs, axis=xa), y=alt.Y("i:O", axis=None, scale=ysc, bandPosition=.5), color=colour)
-    lab = alt.Chart(d).mark_text(align="left", baseline="middle", dy=-8, color=nr.INK, fontSize=12, fontWeight=500).encode(
+    lab = alt.Chart(d).mark_text(align="left", baseline="middle", dy=-8, color=nr.INK, fontSize=8.4, fontWeight=500).encode(
         x=alt.value(6), y=alt.Y("i:O", axis=None, scale=ysc, bandPosition=.5), text="lab:N")
-    note = alt.Chart(d).mark_text(align="left", baseline="middle", dy=9, color=nr.MUTED, fontSize=10.5, font=MONO).encode(
+    note = alt.Chart(d).mark_text(align="left", baseline="middle", dy=9, color=nr.MUTED, fontSize=7.3, font=MONO).encode(
         x=alt.value(6), y=alt.Y("i:O", axis=None, scale=ysc, bandPosition=.5), text="note:N")
     hit = alt.Chart(d).mark_rect(color=nr.INK, opacity=0.001).encode(
         x=alt.value(0), x2=alt.value("width"), y=y,
@@ -371,7 +371,7 @@ def sup_chart():
     rule = alt.Chart(cw).mark_rule(color=nr.INK2, strokeDash=[4, 4]).encode(x=alt.X("x:Q", scale=xsc), y=alt.value(-8),
                                                                           y2=alt.value("height"))
     lab = alt.Chart(cw).mark_text(text="1991: end of the Cold War", align="left", baseline="bottom", dx=5, dy=-10,
-                                  color=nr.INK2, fontSize=12).encode(x=alt.X("x:Q", scale=xsc), y=alt.value(0))
+                                  color=nr.INK2, fontSize=8.4).encode(x=alt.X("x:Q", scale=xsc), y=alt.value(0))
     f2 = lambda v: "–" if pd.isna(v) else f"{v:.2f}"
     n0 = lambda v: 0 if pd.isna(v) else int(v)
     tips = pd.DataFrame({"year": s["year"], "x0": s["year"] - .5, "x1": s["year"] + .5,

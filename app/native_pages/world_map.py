@@ -158,9 +158,9 @@ def alt_finish(chart, height):
     """The look of the Altair charts of this page (as the scatter of Countries & compare): transparent, IBM Plex, no frame."""
     return (chart.properties(height=height).configure_view(stroke=None)
             .configure(background="transparent", font=FONT + ", sans-serif")
-            .configure_axis(labelColor=MUTED, titleColor=MUTED, titleFontWeight="normal", labelFontSize=11, titleFontSize=11,
+            .configure_axis(labelColor=MUTED, titleColor=MUTED, titleFontWeight="normal", labelFontSize=7.7, titleFontSize=7.7,
                             domainColor=LINE, tickColor=LINE, gridColor=LINE)
-            .configure_legend(labelColor=INK2, labelFontSize=12, titleColor=MUTED))
+            .configure_legend(labelColor=INK2, labelFontSize=8.4, titleColor=MUTED))
 
 
 # ------------------------------------------------------------------ the one world map of the three modes
@@ -293,10 +293,10 @@ MAP_SELECTIONS = {"Regimes": ["country", "country_dot", "country_hatch"],
 
 def map_legend(symbol):
     """The legend of every mode: a box in the bottom-left corner of the map (over the South Pacific)."""
-    return alt.Legend(title=None, orient="bottom-left", direction="vertical", symbolType=symbol, symbolSize=100,
+    return alt.Legend(title=None, orient="bottom-left", direction="vertical", symbolType=symbol, symbolSize=49,
                       symbolStrokeWidth=3 if symbol == "stroke" else .8,
                       symbolStrokeColor=alt.Undefined if symbol == "stroke" else "#45443f",
-                      symbolOpacity=.95, labelColor=INK2, labelFontSize=12,
+                      symbolOpacity=.95, labelColor=INK2, labelFontSize=8.4,
                       labelFont=FONT + ", sans-serif", fillColor="rgba(26,26,25,.85)", strokeColor=LINE, padding=8, cornerRadius=6, offset=4,
                       rowPadding=2)
 
@@ -338,7 +338,7 @@ def world_map(info, selected, n, colour, tooltip, legend_symbol="square", over=(
     chart = chart.project(type="identity", fit=FRAME).resolve_scale(color="shared")
     spec = (chart.properties(height=MAP_H).configure_view(stroke=None)
             .configure(background="transparent", font=FONT + ", sans-serif")
-            .configure_legend(labelColor=INK2, labelFontSize=12, symbolType=legend_symbol)).to_dict()
+            .configure_legend(labelColor=INK2, labelFontSize=8.4, symbolType=legend_symbol)).to_dict()
     # the fixed geometry joins the spec only now: inside Altair objects it would be deep-copied on every Play step
     spec["datasets"]["wm_shapes"] = shape_features()
     # the map's height follows its width (Equal Earth frame 960 × 423, as `height: auto` of the HTML map), capped
@@ -550,7 +550,7 @@ def buildup_map(y, selected, n):
     home_dot = (alt.Chart(alt.NamedData("wm_bubbles")).transform_filter("datum.moved")
                 .mark_circle(color=INK2, size=8, opacity=.8).encode(longitude="hx:Q", latitude="hy:Q"))
     labels = (alt.Chart(alt.NamedData("wm_bubbles")).transform_filter("datum.label != ''")
-              .mark_text(color="#111110", fontSize=10, fontWeight=500, cursor="pointer")
+              .mark_text(color="#111110", fontSize=7, fontWeight=500, cursor="pointer")
               .encode(longitude="x:Q", latitude="y:Q", text="label:N", tooltip=BLD_TIP)
               .add_params(BUBBLE_LABEL))
     rows = p.to_dict("records") or [{"iso3": "", "n": n, "x": 0.0, "y": 0.0, "hx": 0.0, "hy": 0.0, "moved": False, "v": 0.0,
@@ -593,11 +593,11 @@ def buildup_top(y, n):
     bar = alt.Chart(d).mark_bar(height=10, cornerRadius=3).encode(
         x=alt.X("v:Q", scale=xs, axis=None), x2=alt.value(alt.ExprRef("width * 0.6")), y=yk,
         color=alt.Color("Regime:N", scale=alt.Scale(domain=BLD_DOMAIN, range=REG_COLS + [NO_REG]), legend=None))
-    rank = alt.Chart(d).mark_text(align="left", color=MUTED, fontSize=12, font="IBM Plex Mono, ui-monospace, monospace").encode(
+    rank = alt.Chart(d).mark_text(align="left", color=MUTED, fontSize=8.4, font="IBM Plex Mono, ui-monospace, monospace").encode(
         x=alt.value(4), y=yk, text="rank:N")
-    name = alt.Chart(d).mark_text(align="left", color=INK, fontSize=13, limit=alt.ExprRef("width * 0.6 - 36")).encode(
+    name = alt.Chart(d).mark_text(align="left", color=INK, fontSize=9.1, limit=alt.ExprRef("width * 0.6 - 36")).encode(
         x=alt.value(28), y=yk, text="name:N")
-    val = alt.Chart(d).mark_text(align="right", color=INK, fontSize=12, fontWeight=500,
+    val = alt.Chart(d).mark_text(align="right", color=INK, fontSize=8.4, fontWeight=500,
                                  font="IBM Plex Mono, ui-monospace, monospace").encode(x=alt.value("width"), y=yk, text="val:N")
     layers = alt.layer(row, track, bar, rank, name, val).properties(padding={"left": 0, "right": 4, "top": 0, "bottom": 0})
     return alt_finish(layers, SIDE_H - 64)
@@ -627,11 +627,11 @@ def supplier_top(y):
     bar = alt.Chart(d).mark_bar(height=10, cornerRadius=3).encode(
         x=alt.X("v:Q", scale=xs, axis=None), x2=alt.value(alt.ExprRef("width * 0.6")), y=yk,
         color=alt.Color("col:N", scale=None, legend=None))
-    rank = alt.Chart(d).mark_text(align="left", color=MUTED, fontSize=12, font="IBM Plex Mono, ui-monospace, monospace").encode(
+    rank = alt.Chart(d).mark_text(align="left", color=MUTED, fontSize=8.4, font="IBM Plex Mono, ui-monospace, monospace").encode(
         x=alt.value(4), y=yk, text="rank:N")
-    name = alt.Chart(d).mark_text(align="left", color=INK, fontSize=13, limit=alt.ExprRef("width * 0.6 - 36")).encode(
+    name = alt.Chart(d).mark_text(align="left", color=INK, fontSize=9.1, limit=alt.ExprRef("width * 0.6 - 36")).encode(
         x=alt.value(28), y=yk, text="name:N")
-    val = alt.Chart(d).mark_text(align="right", color=INK, fontSize=12, fontWeight=500,
+    val = alt.Chart(d).mark_text(align="right", color=INK, fontSize=8.4, fontWeight=500,
                                  font="IBM Plex Mono, ui-monospace, monospace").encode(x=alt.value("width"), y=yk, text="val:N")
     layers = alt.layer(row, track, bar, rank, name, val).properties(padding={"left": 0, "right": 4, "top": 0, "bottom": 0})
     return alt_finish(layers, SIDE_H - 64)
@@ -659,9 +659,9 @@ def regime_bars(y):
             .encode(x=x, y=yk, color=alt.Color("Regime:N", scale=alt.Scale(domain=[REG_LABELS[r] for r in (3, 2, 1, 0)],
                                                                           range=[REG_COLS[r] for r in (3, 2, 1, 0)]), legend=None),
                     tooltip=[alt.Tooltip("Regime:N"), alt.Tooltip("tip:N", title=f"Countries in {y}")]))
-    names = alt.Chart(d).mark_text(align="left", baseline="bottom", dy=-11, dx=2, color=INK2, fontSize=12).encode(
+    names = alt.Chart(d).mark_text(align="left", baseline="bottom", dy=-11, dx=2, color=INK2, fontSize=8.4).encode(
         x=alt.value(0), y=yk, text="Regime:N")
-    counts = alt.Chart(d).mark_text(align="right", baseline="bottom", dy=-11, color=INK, fontSize=13, fontWeight=600).encode(
+    counts = alt.Chart(d).mark_text(align="right", baseline="bottom", dy=-11, color=INK, fontSize=9.1, fontWeight=600).encode(
         x=alt.value("width"), y=yk, text="n:Q")
     return alt_finish(alt.layer(track, bars, names, counts), 200)
 
@@ -751,15 +751,15 @@ def river(series, colours, y, unit, label, share=False, key=None, height=155):
     ussr = alt.Chart(marks[marks["kind"] == "ussr"]).mark_rule(color=MUTED, strokeDash=[2, 3], strokeWidth=1).encode(x="year:Q")
     now = alt.Chart(marks[marks["kind"] == "now"]).mark_rule(color=INK, strokeWidth=2).encode(x="year:Q")
     # names written on the bands, at each band's thickest year, and the 1991 note inside the plot (as the HTML rivers)
-    band_names = alt.Chart(river_labels(long, share, ph)).mark_text(color=INK, fontSize=11, fontWeight=500).encode(
+    band_names = alt.Chart(river_labels(long, share, ph)).mark_text(color=INK, fontSize=7.7, fontWeight=500).encode(
         x="year:Q", y=alt.Y("mid:Q", axis=yax),
         text="series:N")
-    ussr_note = alt.Chart(marks[marks["kind"] == "ussr"]).mark_text(text="Soviet Union ends (1991)", color=INK2, fontSize=11,
+    ussr_note = alt.Chart(marks[marks["kind"] == "ussr"]).mark_text(text="Soviet Union ends (1991)", color=INK2, fontSize=7.7,
                                                                     align="left", baseline="top", dx=4, dy=2).encode(
         x="year:Q", y=alt.value(0))
     layers = [area, band_names, ussr, ussr_note, now, cols]
     align = "left" if y < Y0 + 12 else "right" if y > Y1 - 12 else "center"
-    layers.append(alt.Chart(marks[marks["kind"] == "now"]).mark_text(text=label, color=INK, fontSize=12, font="IBM Plex Mono, ui-monospace, monospace",
+    layers.append(alt.Chart(marks[marks["kind"] == "now"]).mark_text(text=label, color=INK, fontSize=8.4, font="IBM Plex Mono, ui-monospace, monospace",
                                                                       fontWeight="bold", baseline="bottom", dy=-4, align=align)
                   .encode(x="year:Q", y=alt.value(0)))
     chart = alt_finish(alt.layer(*layers).properties(padding={"left": 4, "right": 8, "top": 22, "bottom": 4}), ph)
@@ -890,7 +890,7 @@ def map_card():
                                  label_visibility="collapsed")
         # the year bar, pinned to the bottom of the screen (st.bottom): Play, speed, year and period; the slider follows Play
         with year_bar:
-            with st.container(horizontal=True, vertical_alignment="center", gap="medium", wrap=False):  # one line: the slider shrinks instead
+            with st.container(horizontal=True, vertical_alignment="center", gap="medium"):
                 st.button("Pause" if ss["playing"] else "Play", icon=":material/pause:" if ss["playing"] else ":material/play_arrow:",
                           type="primary", on_click=toggle_play, key="wm_play")
                 st.segmented_control("Speed", list(SPEEDS), key="wm_speed", required=True, on_change=full_rerun,

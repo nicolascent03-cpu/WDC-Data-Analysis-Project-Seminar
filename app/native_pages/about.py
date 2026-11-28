@@ -223,10 +223,10 @@ FAQ = [
       "For example, a government at war buys weapons and also restricts freedoms.",
       "So any pattern is an association, not proof of a cause."],
      ["findings"], ["Correlation vs causation"]),
-    ("limits", "Why do the Findings still show some placeholder numbers?",
-     "Notebook 08 is not finished yet: Part A (the main finding and the event study) is done, the later parts are not.",
-     ["For the parts that are missing, preview numbers show how the results will look.",
-      "A warning at the top of the Findings page names those parts."],
+    ("limits", "Are the results on the Findings page final?",
+     "Yes for the required parts of notebook 08: the main finding and event study (Part A) and who supplied the arms (Part C).",
+     ["The optional splits by kind of conflict (Part B) and what predicts a conflict (Part D) were not done.",
+      "If a result file is missing, the page shows placeholder numbers instead and marks them with a warning."],
      ["findings"], ["Placeholder numbers"]),
 ]
 

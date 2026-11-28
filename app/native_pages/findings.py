@@ -404,9 +404,20 @@ with left.container(border=True, height="stretch"):
             st.caption(desc)
             st.altair_chart(forest(rows), key=f"fd_forest_{title}", width="stretch",
                             alt=f"Forest plot of {title}: coefficients with 95% confidence intervals")
-        if not shown:
-            st.info("Not done yet: the splits (Part B), who supplied the arms (Part C) and what predicts a conflict "
-                    "(Part D) of notebook 08.", icon=":material/hourglass_empty:")
+            if pattern.startswith(r"^C") and res_src == "real":
+                st.markdown("**What it means** :gray[(interpretation in notebook 08, Part C)]")
+                st.markdown("Countries whose arms in the five years before a conflict came mostly from democratic suppliers "
+                            "show about the same change in democracy after onset as countries supplied mostly by autocracies: "
+                            "−0.005 after 5 years (95% CI −0.063 to +0.053) and −0.037 after 10 years (−0.118 to +0.044), "
+                            "comparing countries with similar amounts of arms imports. Both intervals include zero and are "
+                            "wide, so a modest difference in either direction cannot be ruled out. The sample is the 243 "
+                            "onsets in countries that imported arms in the five years before, and supplier democracy may go "
+                            "along with other things, such as Cold War alignment, that the model does not capture.")
+        missing = [f"{name} (Part {part})" for part, pattern, name in
+                   [("B", r"^B_", "the splits by kind of conflict"), ("D", r"^D\d*_", "what predicts a conflict")]
+                   if not allr["model"].str.contains(pattern).any()]
+        if missing:
+            st.caption(":material/hourglass_empty: Not in notebook 08 yet: " + " and ".join(missing) + ".")
         known = allr["model"].str.match(r"^A1_k\d+$")
         for pattern, _, _ in nr.FOREST:
             known |= allr["model"].str.contains(pattern)

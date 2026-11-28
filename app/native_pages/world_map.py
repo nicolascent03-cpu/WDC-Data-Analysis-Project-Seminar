@@ -37,11 +37,9 @@ COMPARE = "native_pages/compare.py"
 TIV_NOTE = ("SIPRI trend-indicator values (TIV) measure military capability transferred, not money. "
             "Historical states are drawn at today's borders (Soviet Union at Russia).")
 NOTES = {
-    "Regimes": "Grey: no V-Dem data for that year. Small states without a shape on the map are drawn as dots.",
-    "Arms flows": "Line width = TIV delivered; country tint = main supplier over the last 5 years. " + TIV_NOTE,
-    "Arms build-up": "Bubble area = major arms received in the previous 10 years (SIPRI TIV, same scale for all years); "
-                     "colour = regime type. A thin line points home where a bubble had to move. Historical states count with "
-                     "today's country (e.g. East Germany with Germany).",
+    "Regimes": "Grey: no data. Dots: small states.",
+    "Arms flows": "Line width: TIV delivered. Country tint: main supplier, last 5 years.",
+    "Arms build-up": "Colour: regime. A thin line points home where a bubble had to move.",
 }
 
 panel = nd.load_panel()
@@ -1076,14 +1074,15 @@ with st.container(border=True):
     with txt:
         st.markdown(":primary[:small[**MAIN FINDING**]]")
         with st.container(horizontal=True, vertical_alignment="center"):
-            st.subheader("Democracy after a conflict starts", anchor=False, width="content")
+            st.subheader("Democracy after a conflict starts", anchor=False, width="content",
+                         help="Regression (model A1 of notebook 08): change in the democracy index k years after a conflict "
+                              "starts, compared with the year before. Arms imports of the 5 years before the onset enter as "
+                              "one continuous, standardised variable (onset × arms imports), with country and year fixed "
+                              "effects. Shaded: 95% confidence band; below zero = less democratic than just before the "
+                              "conflict.")
             if res_src == "demo":
                 st.badge("Placeholder", icon=":material/science:", color="orange")
-        st.caption("Regression (model A1 of notebook 08): change in the democracy index k years after a conflict starts, "
-                   "compared with the year before. Arms imports of the 5 years before the onset enter as one continuous, "
-                   "standardised variable (onset × arms imports), with country and year fixed effects. Shaded: 95% "
-                   "confidence band.")
-        st.markdown(":material/arrow_downward: Below the zero line = less democratic than just before the conflict began.")
+        st.markdown("**Arms imports before a conflict make no clear difference to what happens to democracy after it.**")
         sentence = nr.a1_sentence(a1, k=5)
         if sentence:
             st.markdown(sentence)

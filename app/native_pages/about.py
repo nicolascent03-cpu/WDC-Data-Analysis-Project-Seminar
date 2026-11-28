@@ -352,28 +352,26 @@ with t_about:
     with c_left:
         with st.container(border=True):
             st.subheader("Where the numbers come from", anchor=False)
-            st.markdown("Every figure in this app is computed from the project notebooks 01 to 08, run on the original "
-                        "downloads of V-Dem, UCDP/PRIO and SIPRI. The cleaned tables are in `data/clean/` of the repository; "
-                        "the regression results are the files notebook 08 writes there.")
+            st.markdown("Every figure comes from our notebooks 01 to 08, run on the original V-Dem, UCDP/PRIO and SIPRI "
+                        "downloads. The tables are in `data/clean/`.")
             if nr.any_placeholder():
                 st.caption(":material/science: A regression result file is missing, so the Findings page shows placeholder "
                            "numbers for it and says so.")
         with st.container(border=True):
             st.subheader("Main finding", anchor=False)
             st.markdown(
-                "- The main finding is a regression (notebook 08, model A1) on all conflict onsets; arms imports enter it as one continuous, standardised number.\n"
-                "- Onset: a year with an active conflict after two years without one.\n"
-                "- Arms before onset (**arms_z**): mean arms imports (TIV) in the five years before onset, standardised "
-                "(mean 0, standard deviation 1).\n"
-                "- Change: **y_k** = democracy(t+k) − democracy(t−1), for k = 1 to 10 years after onset.\n"
-                "- Model: `y_k ~ onset + onset:arms_z + arms_z` with country and year fixed effects, standard errors "
-                "clustered by country.\n"
-                "- **b1** (onset): the change after an onset at average arms imports. **b2** (onset:arms_z): how much that "
-                "change differs per standard deviation more arms imports before the onset.\n"
-                "- Conflict, arms imports and regime change influence each other, so the results are associations, not causes.")
-            st.markdown("The **Findings** page shows these results for every k, together with an event study of the democracy "
-                        "index from 10 years before to 10 years after a conflict starts. Parts of notebook 08 that are not done yet "
-                        "show placeholder numbers there, marked as such.")
+                "- A regression on all 281 conflict onsets (notebook 08, model A1), 1 to 10 years after each onset.\n"
+                "- Onset: a conflict year after two years without conflict.\n"
+                "- Arms imports of the 5 years before enter as one standardised number.\n"
+                "- Associations, not causes.")
+            with st.expander("Model details", icon=":material/functions:"):
+                st.markdown(
+                    "- Change: **y_k** = democracy(t+k) − democracy(t−1), k = 1 to 10.\n"
+                    "- **arms_z**: mean arms imports (log TIV) in the 5 years before onset, standardised (mean 0, sd 1).\n"
+                    "- Model: `y_k ~ onset + onset:arms_z + arms_z`, country and year fixed effects, standard errors "
+                    "clustered by country.\n"
+                    "- **b1** (onset): change at average arms imports. **b2** (onset:arms_z): difference per sd more arms.\n"
+                    "- The Findings page also shows a stacked event study, 10 years before to 10 years after onset.")
             try:
                 st.page_link("native_pages/findings.py", label="See the regression results", icon=":material/arrow_forward:")
             except StreamlitAPIException:  # page run on its own, outside native_app.py's navigation
@@ -382,27 +380,19 @@ with t_about:
         with st.container(border=True):
             st.subheader("Pipeline", anchor=False)
             st.markdown(
-                "- One country key (V-Dem country code) for all three sources; UCDP location codes match V-Dem COW codes, "
-                "31 SIPRI names are matched by hand.\n"
-                "- UCDP rows with several locations are split into one row per country; conflict-years are merged into "
-                "periods for the bars.\n"
-                "- SIPRI deliveries without a delivery year and non-state recipients are removed; imports are summed per "
-                "country and year.\n"
-                "- V-Dem defines which country exists in which year. Years without a SIPRI delivery count as 0, years without "
-                "a UCDP conflict as no conflict.\n"
-                "- The world map also has an **Arms flows** mode: SIPRI deliveries drawn from supplier to recipient for the "
-                "chosen year. Only the largest flows of each year are drawn, so smaller deliveries are left out.")
+                "- One country key (V-Dem code) for all three sources; 31 SIPRI names matched by hand.\n"
+                "- UCDP conflicts with several locations: one row per country.\n"
+                "- SIPRI deliveries summed per country and year; non-state recipients removed.\n"
+                "- Years without a delivery count as 0, years without a UCDP conflict as no conflict.\n"
+                "- Arms flows on the World map: only the largest deliveries of each year are drawn.")
     with st.container(border=True):
         st.subheader("Caveats", anchor=False)
         st.markdown(
-            "- SIPRI TIV measures the military capability transferred. It is not a price.\n"
-            "- UCDP counts a conflict only from 25 battle deaths per year.\n"
-            "- V-Dem scores are expert assessments; small changes from one year to the next carry little meaning.\n"
-            "- The map uses today's borders. Historical states such as East Germany or South Yemen are only in the search.\n"
-            "- Some states appear under a successor's code, as in V-Dem: Russia stands for the Soviet Union before 1991, "
-            "Czechia for Czechoslovakia, Serbia for Yugoslavia, Germany for West Germany before 1990, Yemen for North Yemen "
-            "before 1990 and Vietnam for North Vietnam before 1976. Country groups such as the Warsaw Pact or the UN Security "
-            "Council use these codes.")
+            "- TIV measures military capability transferred, not price.\n"
+            "- UCDP counts a conflict from 25 battle deaths a year.\n"
+            "- V-Dem scores are expert ratings: small yearly changes mean little.\n"
+            "- The map uses today's borders; some states appear under a successor's code, as in V-Dem (Russia for the "
+            "Soviet Union before 1991, Serbia for Yugoslavia, Germany for West Germany before 1990).")
     st.subheader("Data sources", anchor=False)
     for col, (name, text, link) in zip(st.columns(3, border=True, gap="medium"), [
         ("UCDP/PRIO Armed Conflict v26.1", "Conflicts with at least 25 battle deaths in a year. Type and intensity per "

@@ -190,20 +190,19 @@ def _clear(lo, hi):
 
 
 def a1_sentence(d, k=5):
-    """The main finding in words, at horizon k (or the nearest available)."""
+    """The main finding at horizon k (or the nearest available), short: the two numbers, then a one-line verdict."""
     if d.empty:
         return None
     r = d.iloc[(d["k"] - k).abs().argmin()]
     k = int(r["k"])
-    yrs = f"{k} year{'s' if k > 1 else ''}"
-    s = (f"{yrs.capitalize()} after a conflict starts, the democracy index of a country with average arms imports has "
-         f"changed by **{sgn(r['b1'])}** (95% CI {_ci(r['b1_lo'], r['b1_hi'])}"
-         f"{'' if _clear(r['b1_lo'], r['b1_hi']) else ', not clearly different from zero'}).")
+    s = f"**{k} year{'s' if k > 1 else ''} after onset:** {sgn(r['b1'])} with average arms imports ({_ci(r['b1_lo'], r['b1_hi'])})"
+    clear = [_clear(r["b1_lo"], r["b1_hi"])]
     if not pd.isna(r["b2"]):
-        s += (f" For each standard deviation more arms imported in the 5 years before, the change differs by "
-              f"**{sgn(r['b2'])}** (95% CI {_ci(r['b2_lo'], r['b2_hi'])}"
-              f"{': a clear difference' if _clear(r['b2_lo'], r['b2_hi']) else ', not clearly different from zero'}), "
-              f"so **{sgn(r['sum'])}** in total for such a country.")
+        s += f", {sgn(r['b2'])} per standard deviation more arms ({_ci(r['b2_lo'], r['b2_hi'])})"
+        clear.append(_clear(r["b2_lo"], r["b2_hi"]))
+    s += ". " + ("Neither is clearly different from zero." if not any(clear) else
+                 "Both are clearly different from zero." if all(clear) else
+                 "Only the " + ("first" if clear[0] else "second") + " is clearly different from zero.")
     return s
 
 

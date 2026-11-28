@@ -35,6 +35,26 @@ the Streamlit app.
   - All text inside the charts and the chord ring is scaled to 70%.
   - The year bars wrap again on narrow screens instead of squeezing the slider.
   - Why: "when i run it now its so small and i resize to 67% for a nice view, change that to default sizing"
+- **Less text everywhere:**
+  - Each card keeps its title and one short takeaway.
+  - How to read a chart and the method moved into the ⓘ tooltip next to the title.
+  - The notebook's long interpretations are folded into "What notebook 08 concludes".
+  - Captions on Countries & compare, the World map card, About and Limits were shortened.
+  - Why: "i think many parts mostly text based stuff is way to busy and not easy to look at"
+- **Findings rebuilt around the three research questions:**
+  - Three answer cards at the top, computed from the result files:
+    - democracy −0.022 after 6–9 years (clear);
+    - arms imports +0.011 (not clear);
+    - suppliers −0.005 (not clear).
+  - A sample line: 281 onsets, 182 countries, 11,553 country-years.
+  - Then 1 · event study, 2 · arms imports (A1), 3 · suppliers (C3 with the suppliers-over-time chart), and Limits.
+  - Each question has a "What we estimate" section with its regression equation.
+  - The duplicate "two terms" charts moved into an expander, and "Checks and splits" is gone.
+  - Why: "is this currently the strongest version of findings? if not, what is missing or redundant? should we show what we are regressing?" and "Yes, both".
+- **FAQ:**
+  - Updated the answers on dark-grey countries, how to compare countries, and what Findings shows.
+  - New questions on "not clearly different from zero", why compare with countries without a conflict, why standard deviations, and how to read the event-study chart.
+  - Why: "what about the faq page?"
 
 ## 2026-11-25 · Real regression results, no more high vs low importers
 

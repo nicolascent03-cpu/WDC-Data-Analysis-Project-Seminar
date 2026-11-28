@@ -111,34 +111,6 @@ st.markdown("Does democracy change after a conflict starts, and does it depend o
 st.caption(":material/info: Associations, not causes.")
 
 
-# ------------------------------------------------------------------ main finding: the A1 regression
-main = nr.a1_main(res)
-with st.container(border=True):
-    heading("Main finding: arms imports make no clear difference", res_src,
-            help="Regression A1 of notebook 08, one for each horizon k = 1 to 10 years: the change in the democracy index "
-                 "from the year before a conflict starts to k years after it, explained by the onset and by onset × arms "
-                 "imports. Arms imports are the average of the 5 years before onset, standardised (mean 0, sd 1). Country "
-                 "and year fixed effects, standard errors clustered by country.\n\nSolid line: a country with average arms "
-                 "imports (b1, with its 95% band). Dashed: one standard deviation more (b1 + b2). Hover a year for the "
-                 "numbers.")
-    if main.empty:
-        st.info("Not available yet: the A1 models of notebook 08 have not been run.", icon=":material/hourglass_empty:")
-    else:
-        st.markdown(nr.a1_sentence(main, 5))
-        st.markdown(nr.a1_legend())
-        st.altair_chart(nr.a1_chart(main, 280), key="fd_main", width="stretch",
-                        alt="Change in the democracy index 1 to 10 years after conflict onset, at average arms imports "
-                            "and at one standard deviation more arms imports")
-        if res_src == "real":
-            notebook_note("A", f"In the years after a conflict onset, the democracy index of a country with average arms imports is "
-                        f"slightly lower than in other countries in the same year, by about 0.005 to 0.011 points on the 0 to 1 "
-                        f"scale. For countries that imported one standard deviation more arms in the five years before the "
-                        f"onset, the estimate is slightly positive in the first five years (about +0.001 to +0.011), but from "
-                        f"about k = 7 the two lines are almost identical. All 95% confidence intervals include zero at every "
-                        f"horizon, so neither estimate can be told apart from zero: with {N_ONSETS} onsets and a democracy "
-                        f"index that changes slowly, the data are not precise enough to show a clear difference.")
-
-
 # ------------------------------------------------------------------ (a) event study
 def es_chart(groups):
     rows = [nr.event_rows(es, g).assign(grp=nr.ES_NAME[g]) for g in groups]
@@ -209,38 +181,6 @@ def es_table():
     return pd.DataFrame([rows[t] for t in sorted(rows)])
 
 
-with st.container(border=True):
-    ok = es is not None and not es.empty
-    heading("Democracy before and after a conflict starts", es_src,
-            help="Stacked event study (A3 of notebook 08): each conflict onset is compared with clean control countries "
-                 "that had no conflict in the same 21 years, with stack-by-country and stack-by-year fixed effects and "
-                 "standard errors clustered by country. The line is the democracy index (0 to 1) of the onset countries "
-                 "relative to the controls and to the year before the onset; below the dashed line = less democratic.")
-    if ok and es_src == "real":
-        takeaway("No gap before the onset; afterwards democracy slowly falls behind, by about 0.02 after 6 to 9 years.")
-    if not ok:
-        st.info("Not available yet: the event study of notebook 08 has not been run.", icon=":material/hourglass_empty:")
-    else:
-        groups = ["all"]
-        st.markdown(legend_line([(nr.ES_NAME[g], nr.ES_COL[g], "■") for g in groups]
-                                + [("Band: 95% confidence interval", "#5a5955", "■")]))
-        chart = es_chart(groups)
-        if chart is None:
-            st.info("No event-study results yet.", icon=":material/hourglass_empty:")
-        else:
-            st.altair_chart(chart, key="fd_es", width="stretch",
-                            alt="Event study: change in the democracy index from 10 years before to 10 years after conflict onset")
-        with st.expander("Show the numbers"):
-            st.dataframe(es_table(), hide_index=True)
-        if es_src == "real":
-            notebook_note("A", "Before the onset, the democracy index of onset countries moves in parallel with the clean controls "
-                        "(all ten leads between −0.006 and +0.004, intervals including zero), so there is no sign of a "
-                        "pre-trend. After the onset it falls behind the controls: by about 0.013 after 4 to 5 years and "
-                        "about 0.018 to 0.025 after 6 to 9 years, where the 95% intervals no longer include zero. This fits "
-                        "conflict onsets being followed by a small, slow decline in democracy, but other shocks around the "
-                        "onset could explain part of it.")
-
-
 # ------------------------------------------------------------------ (b) A1 models over k
 def k_chart(pts, colour, what, scale, k1):
     lo, hi, ticks, dec = scale
@@ -264,36 +204,6 @@ def k_chart(pts, colour, what, scale, k1):
     hit = hover_columns(pts, "x0", "x1", [alt.Tooltip("When:N", title="Horizon"), alt.Tooltip("Est:N", title=what),
                                           alt.Tooltip("CI:N", title="95% CI"), alt.Tooltip("N:N", title="n")])
     return finish(alt.layer(zero, line, ci, *caps, dots, hit).properties(padding={"left": 4, "right": 8, "top": 8, "bottom": 4}), 220)
-
-
-with st.container(border=True):
-    heading("The two terms of the main finding, one by one", res_src,
-            help="One regression for each horizon k: the change in the democracy index from the year before onset to k "
-                 "years after it, with country and year fixed effects. Bars: 95% confidence intervals; an interval that "
-                 "crosses the dashed zero line means no clear change.")
-    p1 = nr.a1_points(res, "onset") if res is not None else pd.DataFrame()
-    p2 = nr.a1_points(res, "onset:arms_z") if res is not None else pd.DataFrame()
-    if p1.empty and p2.empty:
-        st.info("Not available yet: the A1 models of notebook 08 have not been run.", icon=":material/hourglass_empty:")
-    else:
-        both = pd.concat([p1, p2])
-        scale = nice(min(0, both["ci_low"].min()), max(0, both["ci_high"].max()), 4)  # one scale for both charts
-        k1 = max(10, int(both["k"].max()))
-        c1, c2 = st.columns(2, gap="medium")
-        for col, pts, colour, title, term, desc, what in [
-            (c1, p1, nr.ACCENT, "Average change after an onset", "onset",
-             "countries with a conflict onset compared with those without", "Change after onset"),
-            (c2, p2, nr.HI, "Extra change per standard deviation of arms imports", "onset:arms_z",
-             "how much more (or less) for a country importing one sd more arms before the onset",
-             "Extra change per sd of arms imports"),
-        ]:
-            with col:
-                st.markdown(f"**{title}**", help=f"Term **{term}**: {desc}")
-                if pts.empty:
-                    st.info("No results for this term yet.", icon=":material/hourglass_empty:")
-                else:
-                    st.altair_chart(k_chart(pts, colour, what, scale, k1), key=f"fd_k_{term}", width="stretch",
-                                    alt=f"{what} for k = 1 to {k1} years after onset")
 
 
 # ------------------------------------------------------------------ (c) forest plot and (d) suppliers
@@ -386,71 +296,255 @@ def sup_chart():
     return finish(alt.layer(lines, rule, lab, hit).properties(padding={"left": 4, "right": 8, "top": 24, "bottom": 4}), 480)
 
 
-left, right = st.columns(2, gap="medium")
-with left.container(border=True, height="stretch"):
-    heading("Checks and splits", res_src,
-            help="Dot: estimate; line: 95% confidence interval. Orange: the interval does not cross zero. Each group has "
-                 "its own scale.")
+
+
+# ------------------------------------------------------------------ the numbers of the three answers
+# Taken from the result files, so they follow notebook 08 when it is run again.
+def es_window(t0=6, t1=9):
+    """Mean event-study estimate in years t0 to t1 after onset, and whether every interval there excludes zero."""
+    if es is None or es.empty:
+        return None, False
+    r = es[(es["group"] == "all") & es["t"].between(t0, t1)]
+    if r.empty:
+        return None, False
+    return float(r["coef"].mean()), bool(((r["ci_high"] < 0) | (r["ci_low"] > 0)).all())
+
+
+def term(model, name):
+    """One row of reg_results.csv (coef, ci_low, ci_high, n_obs, n_countries), or None."""
+    if res is None:
+        return None
+    r = res[(res["model"] == model) & (res["term"] == name)]
+    return None if r.empty else r.iloc[0]
+
+
+def clear(r):
+    return r is not None and (r["ci_low"] > 0 or r["ci_high"] < 0)
+
+
+def answer_card(col, question, value, label, is_clear, ci=None):
+    with col.container(border=True, height="stretch"):
+        st.markdown(f":gray[{question}]")
+        st.markdown(f"## {value}")
+        st.caption(label + (f" · 95% CI {ci}" if ci else ""))
+        if value != "–":
+            st.badge("clear" if is_clear else "not clearly different from zero",
+                     color="green" if is_clear else "gray", icon=":material/check:" if is_clear else ":material/remove:")
+
+
+def summary():
+    es_v, es_clear = es_window()
+    b2, c3 = term("A1_k5", "onset:arms_z"), term("C3_k5", "onset:sup_dem_pre5")
+    c1, c2, c3c = st.columns(3, gap="medium")
+    answer_card(c1, "1 · Democracy after a conflict starts", "–" if es_v is None else nr.sgn(es_v),
+                "democracy index 6 to 9 years after onset, against countries without conflict", es_clear)
+    answer_card(c2, "2 · Effect of arms imports", "–" if b2 is None else nr.sgn(b2["coef"]),
+                "per standard deviation more arms imports, 5 years after onset", clear(b2),
+                None if b2 is None else ci_txt(b2["ci_low"], b2["ci_high"]))
+    answer_card(c3c, "3 · Effect of who supplied them", "–" if c3 is None else nr.sgn(c3["coef"]),
+                "arms from democracies instead of autocracies, 5 years after onset", clear(c3),
+                None if c3 is None else ci_txt(c3["ci_low"], c3["ci_high"]))
+    a1k1 = term("A1_k1", "onset")
+    if a1k1 is not None:
+        st.caption(f"{N_ONSETS} conflict onsets in {int(a1k1['n_countries'])} countries · {int(a1k1['n_obs']):,} "
+                   f"country-years · 1950 to 2025. On the democracy index from 0 to 1.")
+
+
+def estimate(latex, lines):
+    """What a question's model estimates: the equation and what its parts mean, folded away."""
+    with st.expander("What we estimate", icon=":material/functions:"):
+        st.latex(latex)
+        st.markdown(lines)
+
+
+# ------------------------------------------------------------------ 1. what happens to democracy (event study, A3)
+def q1_card():
+    with st.container(border=True):
+        ok = es is not None and not es.empty
+        heading("1 · What happens to democracy after a conflict starts?", es_src,
+                help="Below the dashed line = less democratic than the year before the onset, compared with countries "
+                     "without conflict. Hover a year for the estimate and the number of onsets.")
+        if not ok:
+            st.info("Not available yet: the event study of notebook 08 has not been run.", icon=":material/hourglass_empty:")
+            return
+        v, is_clear = es_window()
+        if es_src == "real" and v is not None:
+            takeaway(f"No gap before the onset. Afterwards democracy slowly falls behind: {nr.sgn(v)} on average "
+                     f"6 to 9 years later{' (clear)' if is_clear else ''}.")
+        st.markdown(legend_line([(nr.ES_NAME["all"], nr.ES_COL["all"], "■"), ("Band: 95% confidence interval", "#5a5955", "■")]))
+        chart = es_chart(["all"])
+        if chart is None:
+            st.info("No event-study results yet.", icon=":material/hourglass_empty:")
+        else:
+            st.altair_chart(chart, key="fd_es", width="stretch",
+                            alt="Event study: democracy index from 10 years before to 10 years after conflict onset")
+        estimate(r"\text{democracy}_{s,i,t} = \sum_{e=-10,\; e \neq -1}^{10} \beta_e \, D^{\,e}_{s,i,t}"
+                 r" + \alpha_{s,i} + \lambda_{s,t} + \varepsilon_{s,i,t}",
+                 "- One **stack** *s* per conflict onset: the onset country and the **clean controls**, countries with no "
+                 "conflict in the same 21 years.\n"
+                 "- $D^{\\,e}$ = 1 for the onset country *e* years from its onset; **β_e** is how far its democracy index "
+                 "is from the controls, against the year before onset (e = −1).\n"
+                 "- Stack-by-country (α) and stack-by-year (λ) fixed effects, standard errors clustered by country. "
+                 "Notebook 08, A3.")
+        with st.expander("Show the numbers"):
+            st.dataframe(es_table(), hide_index=True)
+        if es_src == "real":
+            notebook_note("A", "Before the onset, the democracy index of onset countries moves in parallel with the clean "
+                          "controls (all ten leads between −0.006 and +0.004, intervals including zero), so there is no sign "
+                          "of a pre-trend. After the onset it falls behind the controls: by about 0.013 after 4 to 5 years "
+                          "and about 0.018 to 0.025 after 6 to 9 years, where the 95% intervals no longer include zero. This "
+                          "fits conflict onsets being followed by a small, slow decline in democracy, but other shocks around "
+                          "the onset could explain part of it.")
+
+
+# ------------------------------------------------------------------ 2. do arms imports change it (A1)
+def terms_detail():
+    """b1 and b2 of A1 as separate charts, one scale for both."""
+    p1 = nr.a1_points(res, "onset") if res is not None else pd.DataFrame()
+    p2 = nr.a1_points(res, "onset:arms_z") if res is not None else pd.DataFrame()
+    if p1.empty and p2.empty:
+        return
+    with st.expander("Show each term separately", icon=":material/bar_chart:"):
+        both = pd.concat([p1, p2])
+        scale = nice(min(0, both["ci_low"].min()), max(0, both["ci_high"].max()), 4)
+        k1 = max(10, int(both["k"].max()))
+        c1, c2 = st.columns(2, gap="medium")
+        for col, pts, colour, title, name, what in [
+            (c1, p1, nr.ACCENT, "Change after an onset (b1)", "onset", "Change after onset"),
+            (c2, p2, nr.HI, "Extra change per sd of arms imports (b2)", "onset:arms_z", "Extra change per sd of arms imports"),
+        ]:
+            with col:
+                st.markdown(f"**{title}**")
+                if not pts.empty:
+                    st.altair_chart(k_chart(pts, colour, what, scale, k1), key=f"fd_k_{name}", width="stretch",
+                                    alt=f"{what} for k = 1 to {k1} years after onset")
+
+
+def q2_card():
+    main = nr.a1_main(res)
+    with st.container(border=True):
+        heading("2 · Do arms imports change that?", res_src,
+                help="Solid line: a country with average arms imports before the conflict (b1, with its 95% band). "
+                     "Dashed: one standard deviation more (b1 + b2). Hover a year for the numbers.")
+        if main.empty:
+            st.info("Not available yet: the A1 models of notebook 08 have not been run.", icon=":material/hourglass_empty:")
+            return
+        b2 = term("A1_k5", "onset:arms_z")
+        takeaway("No clear difference: countries that imported more arms before the conflict look about the same afterwards."
+                 if b2 is not None and not clear(b2) else "Arms imports before the conflict go with a different change.")
+        st.markdown(nr.a1_sentence(main, 5))
+        st.markdown(nr.a1_legend())
+        st.altair_chart(nr.a1_chart(main, 280), key="fd_main", width="stretch",
+                        alt="Change in the democracy index 1 to 10 years after conflict onset, at average arms imports "
+                            "and at one standard deviation more arms imports")
+        estimate(r"y^{(k)}_{i,t} = \beta_1\,\text{onset}_{i,t} + \beta_2\,\text{onset}_{i,t}\times\text{arms}^{z}_{i,t}"
+                 r" + \gamma\,\text{arms}^{z}_{i,t} + \alpha_i + \lambda_t + \varepsilon_{i,t}",
+                 "- $y^{(k)}$ = democracy index *k* years after *t* minus the year before *t*, one regression for each "
+                 "k = 1 to 10.\n"
+                 "- **onset** = 1 in a conflict year after two years without conflict.\n"
+                 "- **arms_z** = mean log arms imports of the 5 years before, standardised (mean 0, sd 1): one "
+                 "continuous number, no cut-off between groups.\n"
+                 "- **β₁**: change at average arms imports; **β₂**: difference per sd more arms. Country (α) and year (λ) "
+                 "fixed effects, standard errors clustered by country. Notebook 08, A1.")
+        terms_detail()
+        if res_src == "real":
+            notebook_note("A", "In the years after a conflict onset, the democracy index of a country with average arms "
+                          "imports is slightly lower than in other countries in the same year, by about 0.005 to 0.011 points "
+                          "on the 0 to 1 scale. For countries that imported one standard deviation more arms in the five "
+                          "years before the onset, the estimate is slightly positive in the first five years (about +0.001 to "
+                          "+0.011), but from about k = 7 the two lines are almost identical. All 95% confidence intervals "
+                          f"include zero at every horizon: with {N_ONSETS} onsets and a democracy index that changes slowly, "
+                          "the data are not precise enough to show a clear difference.")
+
+
+# ------------------------------------------------------------------ 3. does it matter who supplied them (C3)
+def q3_card():
+    allr = res[res["coef"].notna() & res["model"].notna()] if res is not None else pd.DataFrame()
+    with st.container(border=True):
+        heading("3 · Does it matter who supplied the arms?", res_src,
+                help="Left: the regression (dot: estimate; line: 95% interval). Right: how democratic the suppliers were "
+                     "each year, weighted by TIV, for all importing countries.")
+        rows = allr[allr["model"].str.contains(r"^C\d*_")] if not allr.empty else allr
+        c3 = term("C3_k5", "onset:sup_dem_pre5")
+        if c3 is not None:
+            takeaway("No clear difference between arms from democracies and arms from autocracies."
+                     if not clear(c3) else "Arms from democracies go with a different change.")
+        left, right = st.columns(2, gap="large")
+        with left:
+            if rows.empty:
+                st.info("Not available yet: the supplier regression of notebook 08 has not been run.",
+                        icon=":material/hourglass_empty:")
+            else:
+                st.markdown("**The regression**", help=dict((t, d) for _, t, d in nr.FOREST).get("Who supplied the arms (C)"))
+                st.altair_chart(forest(rows), key="fd_forest_C", width="stretch",
+                                alt="Supplier democracy before onset and the change in democracy after it, with 95% intervals")
+                estimate(r"y^{(k)}_{i,t} = \beta_1\,\text{onset} + \beta_2\,\text{onset}\times\text{arms}^{z} + "
+                         r"\beta_3\,\text{onset}\times\text{supdem} + \gamma\,\text{arms}^{z} + \delta\,\text{supdem}"
+                         r" + \alpha_i + \lambda_t + \varepsilon_{i,t}",
+                         "- The model of question 2 plus **supdem**: how democratic the suppliers of the 5 years before "
+                         "were (0 = all autocracies, 1 = all democracies), weighted by TIV.\n"
+                         "- **β₃**: the difference between arms only from democracies and only from autocracies, for k = 5 "
+                         "and 10.\n"
+                         "- Only countries that imported arms in those 5 years. Notebook 08, C3.")
+        with right:
+            if sup is None or sup.empty:
+                st.info("Not available yet: the supplier table of notebook 08 does not exist.", icon=":material/hourglass_empty:")
+            else:
+                st.markdown("**Who supplied the arms, 1950 to 2025**")
+                st.markdown(legend_line([("All recipients", nr.INK, "━"), ("Democratic recipients", nr.REG_COLS[3], "━"),
+                                         ("Autocratic recipients", nr.REG_COLS[0], "━")]))
+                st.altair_chart(sup_chart(), key="fd_sup", width="stretch",
+                                alt="Mean democracy of arms suppliers per year, 1950 to 2025")
+        if res_src == "real" and c3 is not None:
+            notebook_note("C", "Countries whose arms in the five years before a conflict came mostly from democratic "
+                          "suppliers show about the same change in democracy after onset as countries supplied mostly by "
+                          "autocracies: −0.005 after 5 years (95% CI −0.063 to +0.053) and −0.037 after 10 years (−0.118 to "
+                          "+0.044), comparing countries with similar amounts of arms imports. Both intervals include zero and "
+                          "are wide, so a modest difference in either direction cannot be ruled out. The sample is the 243 "
+                          "onsets in countries that imported arms in the five years before, and supplier democracy may go "
+                          "along with other things, such as Cold War alignment, that the model does not capture.")
+
+
+def more_models():
+    """Further models of notebook 08 (splits B, prediction D, others), only when the results file has them."""
     allr = res[res["coef"].notna() & res["model"].notna()] if res is not None else pd.DataFrame()
     if allr.empty:
-        st.info("Not available yet: the models of notebook 08 have not been run.", icon=":material/hourglass_empty:")
-    else:
-        shown = False
-        for pattern, title, desc in nr.FOREST:
-            rows = allr[allr["model"].str.contains(pattern)]
-            if rows.empty:
-                continue
-            shown = True
+        return
+    extra = [(p, t, d) for p, t, d in nr.FOREST if not p.startswith(r"^C") and allr["model"].str.contains(p).any()]
+    known = allr["model"].str.match(r"^A1_k\d+$")
+    for p, _, _ in nr.FOREST:
+        known |= allr["model"].str.contains(p)
+    other = allr[~known]
+    if not extra and other.empty:
+        return
+    with st.container(border=True):
+        heading("Further models", res_src)
+        for pattern, title, desc in extra:
             st.markdown(f"**{title}**", help=desc)
-            st.altair_chart(forest(rows), key=f"fd_forest_{title}", width="stretch",
-                            alt=f"Forest plot of {title}: coefficients with 95% confidence intervals")
-            if pattern.startswith(r"^C") and res_src == "real":
-                takeaway("Arms from democracies or autocracies: no clear difference.")
-                notebook_note("C", "Countries whose arms in the five years before a conflict came mostly from democratic suppliers "
-                            "show about the same change in democracy after onset as countries supplied mostly by autocracies: "
-                            "−0.005 after 5 years (95% CI −0.063 to +0.053) and −0.037 after 10 years (−0.118 to +0.044), "
-                            "comparing countries with similar amounts of arms imports. Both intervals include zero and are "
-                            "wide, so a modest difference in either direction cannot be ruled out. The sample is the 243 "
-                            "onsets in countries that imported arms in the five years before, and supplier democracy may go "
-                            "along with other things, such as Cold War alignment, that the model does not capture.")
-        missing = [f"{name} (Part {part})" for part, pattern, name in
-                   [("B", r"^B_", "splits by kind of conflict"), ("D", r"^D\d*_", "what predicts a conflict")]
-                   if not allr["model"].str.contains(pattern).any()]
-        if missing:  # the optional parts of notebook 08 that were not estimated
-            st.caption("Not estimated in this project (optional parts of notebook 08): " + " and ".join(missing) + ".")
-        known = allr["model"].str.match(r"^A1_k\d+$")
-        for pattern, _, _ in nr.FOREST:
-            known |= allr["model"].str.contains(pattern)
-        other = allr[~known]
+            st.altair_chart(forest(allr[allr["model"].str.contains(pattern)]), key=f"fd_forest_{title}", width="stretch")
         if not other.empty:
-            st.markdown("**Other models**")
             st.dataframe(pd.DataFrame({"Model": other["model"], "Term": other["term"],
                                        "Coef.": [nr.sgn(c) for c in other["coef"]],
                                        "95% CI": [ci_txt(a, b) for a, b in zip(other["ci_low"], other["ci_high"])],
-                                       "n": other["n_obs"], "Countries": other["n_countries"]}), hide_index=True,
-                         column_config={"n": st.column_config.NumberColumn(format="%,d"),
-                                        "Countries": st.column_config.NumberColumn(format="%,d")})
-
-with right.container(border=True, height="stretch"):
-    heading("Who supplied the arms over time", sup_src,
-            help="Democracy of the suppliers (0 = all arms from autocracies, 1 = from full democracies), weighted by TIV, "
-                 "averaged over all countries that imported arms that year.")
-    if sup is None or sup.empty:
-        st.info("Not available yet: the supplier table of notebook 08 does not exist.", icon=":material/hourglass_empty:")
-    else:
-        st.markdown(legend_line([("All recipients", nr.INK, "━"), ("Democratic recipients", nr.REG_COLS[3], "━"),
-                                 ("Autocratic recipients", nr.REG_COLS[0], "━")]))
-        st.altair_chart(sup_chart(), key="fd_sup", width="stretch",
-                        alt="Mean democracy of arms suppliers per year, 1950 to 2025")
+                                       "n": other["n_obs"], "Countries": other["n_countries"]}), hide_index=True)
 
 
-# ------------------------------------------------------------------ limits
-with st.container(border=True):
-    st.subheader("Limits", anchor=False)
-    a, b = st.columns(2, gap="large")
-    a.markdown(
-        "- **Associations, not causes.** :gray[Conflict, arms and regimes influence each other.]\n"
-        "- **TIV is not money.** :gray[It measures military capability.]")
-    b.markdown(
-        "- **Few onsets.** :gray[281 (243 with arms before them): too few to tell groups apart.]\n"
-        "- **Historical states.** :gray[Counted under a successor's code, as in V-Dem.]")
+def limits_card():
+    with st.container(border=True):
+        st.subheader("Limits", anchor=False)
+        a, b = st.columns(2, gap="large")
+        a.markdown(
+            "- **Associations, not causes.** :gray[Conflict, arms and regimes influence each other.]\n"
+            "- **TIV is not money.** :gray[It measures military capability.]")
+        b.markdown(
+            "- **Few onsets.** :gray[281 (243 with arms before them): too few to tell groups apart.]\n"
+            "- **Historical states.** :gray[Counted under a successor's code, as in V-Dem.]")
+
+
+# ------------------------------------------------------------------ the page, in the order of the research question
+summary()
+q1_card()
+q2_card()
+q3_card()
+more_models()
+limits_card()

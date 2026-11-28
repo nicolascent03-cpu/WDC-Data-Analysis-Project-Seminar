@@ -351,12 +351,13 @@ with t_about:
     c_left, c_right = st.columns(2, gap="medium")
     with c_left:
         with st.container(border=True):
-            st.subheader("Prototype status", anchor=False)
-            st.markdown("This page is a working prototype of the Streamlit app. The figures come from a test run of the project "
-                        "notebooks on the real downloads. Before quoting any number, check it against your own notebook results.")
+            st.subheader("Where the numbers come from", anchor=False)
+            st.markdown("Every figure in this app is computed from the project notebooks 01 to 08, run on the original "
+                        "downloads of V-Dem, UCDP/PRIO and SIPRI. The cleaned tables are in `data/clean/` of the repository; "
+                        "the regression results are the files notebook 08 writes there.")
             if nr.any_placeholder():
-                st.caption(":material/science: Some results on the Findings page are still placeholders (the parts of "
-                           "notebook 08 that are not finished).")
+                st.caption(":material/science: A regression result file is missing, so the Findings page shows placeholder "
+                           "numbers for it and says so.")
         with st.container(border=True):
             st.subheader("Main finding", anchor=False)
             st.markdown(

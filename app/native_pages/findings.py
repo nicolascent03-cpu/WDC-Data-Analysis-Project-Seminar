@@ -414,10 +414,10 @@ with left.container(border=True, height="stretch"):
                             "onsets in countries that imported arms in the five years before, and supplier democracy may go "
                             "along with other things, such as Cold War alignment, that the model does not capture.")
         missing = [f"{name} (Part {part})" for part, pattern, name in
-                   [("B", r"^B_", "the splits by kind of conflict"), ("D", r"^D\d*_", "what predicts a conflict")]
+                   [("B", r"^B_", "splits by kind of conflict"), ("D", r"^D\d*_", "what predicts a conflict")]
                    if not allr["model"].str.contains(pattern).any()]
-        if missing:
-            st.caption(":material/hourglass_empty: Not in notebook 08 yet: " + " and ".join(missing) + ".")
+        if missing:  # the optional parts of notebook 08 that were not estimated
+            st.caption("Not estimated in this project (optional parts of notebook 08): " + " and ".join(missing) + ".")
         known = allr["model"].str.match(r"^A1_k\d+$")
         for pattern, _, _ in nr.FOREST:
             known |= allr["model"].str.contains(pattern)
@@ -457,4 +457,5 @@ with st.container(border=True):
     b.markdown(
         "- **Historical states.** :gray[The Soviet Union, Yugoslavia and others are counted under a successor's code, as in "
         "V-Dem.]\n"
-        "- **Preliminary.** :gray[The models of notebook 08 are still being checked; numbers can change.]")
+        "- **Few onsets.** :gray[281 conflict onsets (243 with arms imports before them) are enough to show a small "
+        "decline in democracy, but not to tell groups of countries reliably apart.]")

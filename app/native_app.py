@@ -6,7 +6,7 @@ Pages live in app/native_pages/. Data comes from data/clean/ through app/native_
 app/native_results.py (regression results of notebook 08, or placeholders until they exist).
 Two small custom components in app/native_components/ draw what Streamlit cannot: the chord ring with
 its country card, and the regimes map with striped conflict countries.
-The earlier HTML prototype still runs as app/adc_app.py.
+The earlier HTML version of the website still runs as app/adc_app.py.
 """
 
 from pathlib import Path

@@ -55,6 +55,16 @@ the Streamlit app.
   - Updated the answers on dark-grey countries, how to compare countries, and what Findings shows.
   - New questions on "not clearly different from zero", why compare with countries without a conflict, why standard deviations, and how to read the event-study chart.
   - Why: "what about the faq page?"
+- **Full test run and less flicker:**
+  - Every page, Play in every mode, mode switches, page switches and the main controls were measured in the browser: charts drawn anew, the page dimming while Streamlit reruns, and console errors.
+  - The fixed map geometry (country outlines, conflict stripes, the land of the compare page's arms-flows map) is now served once as static files (`app/static/`, `server.enableStaticServing`) instead of being sent again on every Play step and every click.
+  - Data sent per run:
+    - World map: 0.44 to 0.12 MB;
+    - compare with one country: 1.35 to 0.25 MB;
+    - compare with G7: 2.07 to 0.96 MB.
+  - Switching map modes and the automatic stop at the end of Play no longer dim the page.
+  - The duplicate "no data" note in Regimes mode was removed.
+  - Why: "run it all through and tell me how to remove all flickering if possible and other issues"
 
 ## 2026-11-25 · Real regression results, no more high vs low importers
 

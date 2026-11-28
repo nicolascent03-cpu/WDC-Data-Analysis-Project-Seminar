@@ -5,6 +5,7 @@ app/site/mapdata.json, which only serve to give every country one point (longitu
 drawing arms flows as lines.
 """
 
+import hashlib
 import json
 import re
 from pathlib import Path
@@ -282,3 +283,23 @@ def vega_land_shapes():
             feats.append({"type": "Feature", "iso3": iso, "properties": {"iso3": iso},
                           "geometry": {"type": "MultiPolygon", "coordinates": polys}})
     return feats
+
+
+# ------------------------------------------------------------------ static files for fixed chart data
+# Fixed data (country outlines, conflict stripes) is served from app/static/ (server.enableStaticServing in
+# .streamlit/config.toml): the browser loads each file once and caches it, and a chart only names the file. Inline, it
+# went to the browser again on every Play step and every click (about 0.3 MB on the World map, 1.2 MB on the compare
+# page's arms-flows map), which is slow on Streamlit Cloud. The content hash in the file name makes browsers load a
+# new file when the data changes.
+STATIC = ROOT / "app" / "static"
+
+
+@st.cache_resource
+def static_url(name, _build):
+    """Write the JSON of `_build()` to app/static/<name>.<hash>.json once, return its URL (relative to the page)."""
+    body = json.dumps(_build(), separators=(",", ":"))
+    path = STATIC / f"{name}.{hashlib.sha1(body.encode()).hexdigest()[:10]}.json"
+    if not path.exists():
+        STATIC.mkdir(exist_ok=True)
+        path.write_text(body, encoding="utf8")
+    return f"app/static/{path.name}"

@@ -1006,7 +1006,8 @@ def flows_deck(f, cmap):
                      pickable=True, auto_highlight=True)
     dots = pdk.Layer("ScatterplotLayer", data=sel_pts, get_position=["lon", "lat"], get_fill_color=[228, 132, 97, 230],
                      get_radius=70000, radius_min_pixels=3, radius_max_pixels=7)
-    land = pdk.Layer("GeoJsonLayer", data=nd.country_geojson(), filled=True, stroked=True, get_fill_color=[42, 42, 40, 255],
+    # the outlines from a static file (loaded once by the browser), not 1.2 MB inline on every Play step
+    land = pdk.Layer("GeoJsonLayer", data=nd.static_url("world_land", nd.country_geojson), filled=True, stroked=True, get_fill_color=[42, 42, 40, 255],
                      get_line_color=[21, 21, 20, 255], line_width_min_pixels=0.5)
     view = pdk.ViewState(latitude=22, longitude=20, zoom=0.55, pitch=30, bearing=0, min_zoom=0.3)
     return pdk.Deck(layers=[land, arcs, dots], initial_view_state=view, map_provider=None, map_style=None,

@@ -1,3 +1,7 @@
+[server]
+# app/static/: the World map's fixed geometry, loaded once by the browser (see world_map.py)
+enableStaticServing = true
+
 [client]
 # Hide Deploy / rerun / settings entries so the ADC site gets the whole window.
 toolbarMode = "minimal"

@@ -37,7 +37,7 @@ COMPARE = "native_pages/compare.py"
 TIV_NOTE = ("SIPRI trend-indicator values (TIV) measure military capability transferred, not money. "
             "Historical states are drawn at today's borders (Soviet Union at Russia).")
 NOTES = {
-    "Regimes": "Grey: no data. Dots: small states.",
+    "Regimes": "Dots: small states.",
     "Arms flows": "Line width: TIV delivered. Country tint: main supplier, last 5 years.",
     "Arms build-up": "Colour: regime. A thin line points home where a bubble had to move.",
 }
@@ -275,6 +275,23 @@ def hatch_features():
     return out
 
 
+
+# The fixed geometry (country outlines, conflict stripes) comes from static files, see nd.static_url.
+
+
+def use_static(spec, name, url):
+    """Point every reference to the named dataset `name` in a Vega-Lite spec to the static file `url`."""
+    def walk(o):
+        if isinstance(o, dict):
+            if o == {"name": name}:
+                return {"url": url, "format": {"type": "json"}}
+            return {k: walk(v) for k, v in o.items()}
+        if isinstance(o, list):
+            return [walk(v) for v in o]
+        return o
+    return walk(spec)
+
+
 # selections of the map: "n" changes with the country card or the pinned card, so a click on the same country after the
 # card was closed is a new selection
 COUNTRY = alt.selection_point(name="country", fields=["iso3", "n"], on="click", empty=False)
@@ -338,12 +355,12 @@ def world_map(info, selected, n, colour, tooltip, legend_symbol="square", over=(
             .configure(background="transparent", font=FONT + ", sans-serif")
             .configure_legend(labelColor=INK2, labelFontSize=8.4, symbolType=legend_symbol)).to_dict()
     # the fixed geometry joins the spec only now: inside Altair objects it would be deep-copied on every Play step
-    spec["datasets"]["wm_shapes"] = shape_features()
+    spec = use_static(spec, "wm_shapes", nd.static_url("wm_shapes", shape_features))
     # the map's height follows its width (Equal Earth frame 960 × 423, as `height: auto` of the HTML map), capped
     spec.pop("height", None)
     spec.setdefault("params", []).append({"name": "height", "update": f"min(width * {H_PX / W_PX:.4f}, {MAP_MAX_H})"})
     if "wm_hatch" in spec["datasets"]:
-        spec["datasets"]["wm_stripes"] = hatch_features()
+        spec = use_static(spec, "wm_stripes", nd.static_url("wm_stripes", hatch_features))
     return spec
 
 
@@ -915,7 +932,7 @@ def map_card():
         with left:
             if mode == "Regimes":
                 chart = regimes_map(y, show_conflict, card_iso, n)
-                badge = (f"Striped: active armed conflict in {y} (denser stripes: war)" if show_conflict
+                badge = (f"Striped: active armed conflict in {y} (denser stripes: war) · dark grey: no data" if show_conflict
                          else f"Dark grey: no V-Dem data for {y}")
             elif mode == "Arms flows":
                 chart = flows_map(y, top_n, tint, highlight, pin_iso, n)
